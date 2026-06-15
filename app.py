@@ -157,11 +157,14 @@ def _build_capture_html(xlsx_bytes):
     return h
 
 
+@app.route('/minipdf')
 @app.route('/minipdf/')
 @app.route('/minipdf/<path:filename>')
 def serve_minipdf(filename='index.html'):
     """Serve MiniPdf WASM static files"""
-    return send_from_directory('static/minipdf', filename)
+    import os as _os
+    base = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'minipdf')
+    return send_from_directory(base, filename)
 
 
 if __name__ == '__main__':
