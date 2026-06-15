@@ -273,3 +273,30 @@ def convert_xlsx_to_pdf(xlsx_bytes):
     c.save()
     buf.seek(0)
     return buf.read()
+
+
+# ── CLI ──
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) < 2:
+        print('xlsx2pdf — 純 Python xlsx → PDF 渲染器')
+        print('用法: python xlsx2pdf.py <input.xlsx> [-o output.pdf]')
+        sys.exit(1)
+
+    input_path = sys.argv[1]
+    output_path = input_path.replace('.xlsx', '.pdf')
+
+    i = 2
+    while i < len(sys.argv):
+        if sys.argv[i] == '-o' and i + 1 < len(sys.argv):
+            output_path = sys.argv[i + 1]; i += 2
+        else:
+            i += 1
+
+    with open(input_path, 'rb') as f:
+        pdf = convert_xlsx_to_pdf(f.read())
+
+    with open(output_path, 'wb') as f:
+        f.write(pdf)
+
+    print(f'OK: {input_path} → {output_path} ({len(pdf)} bytes)')
