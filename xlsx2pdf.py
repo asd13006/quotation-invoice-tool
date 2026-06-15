@@ -160,9 +160,9 @@ def convert_xlsx_to_pdf(xlsx_bytes):
         else:
             row_heights[ri] = 16
 
-    # ── Render each cell ──
+    # ── Pass 1: 收集所有 cell 資訊 ──
+    cells = []  # [(cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border)]
     y = PAGE_H - MARGIN
-    rendered = set()  # (row, col) to skip merged sub-cells
 
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
         r = row[0].row
@@ -181,9 +181,7 @@ def convert_xlsx_to_pdf(xlsx_bytes):
             # Skip merged sub-cells
             if (r, ci) in merged:
                 mr1, mc1, mr2, mc2 = merged[(r, ci)]
-                if (r, ci) != (mr1, mc1):  # not top-left
-                    continue
-                # Calculate merged cell dimensions
+                if (r, ci) != (mr1, mc1): continue
                 cell_w = sum(col_widths[mc1:mc2 + 1]) * scale
                 cell_h = sum(row_heights.get(ri, 16) for ri in range(mr1, mr2 + 1))
                 cx = col_x[mc1]
@@ -197,62 +195,62 @@ def convert_xlsx_to_pdf(xlsx_bytes):
             val = str(cell.value)
             if val.startswith('='):
                 val = _eval_formula(val, ws, r, ci)
-            # 唔好 truncate 中文，render 時自然會被 cell width 限制視覺效果
 
-            # Background
+            # Font
+            fs = 8 * scale
+            is_bold = False
+            try:
+                if cell.font:
+                    if cell.font.size: fs = cell.font.size * scale
+                    if cell.font.bold: is_bold = True
+            except: pass
+            fs = max(min(fs, 16), 5)
+
+            # Background color
+            has_bg = False; bg_rgb = None
             try:
                 fill = cell.fill
                 if fill.patternType == 'solid':
                     rgb = fill.fgColor.rgb
                     if rgb and rgb not in ('00000000', '0'):
-                        c.setFillColor(colors.HexColor('#' + rgb[2:]))
-                        c.rect(cx, cy, cell_w, cell_h, fill=1, stroke=0)
-                        c.setFillColor(colors.black)
+                        has_bg = True; bg_rgb = rgb
             except: pass
 
             # Border
+            has_border = False
             try:
                 b = cell.border
-                has_b = any(getattr(b, s).style for s in ['left', 'right', 'top', 'bottom'])
-                if has_b:
-                    c.setStrokeColor(colors.HexColor('#D9D9D9'))
-                    c.setLineWidth(0.3)
-                    c.rect(cx, cy, cell_w, cell_h)
+                has_border = any(getattr(b, s).style for s in ['left','right','top','bottom'])
             except: pass
 
-            # Font size + bold (跟足 xlsx，font.size 已係 point size)
-            fs = 8 * scale  # default scaled
-            is_bold = False
-            try:
-                if cell.font:
-                    if cell.font.size:
-                        fs = cell.font.size * scale  # 直接用 xlsx point size，配合 scale
-                    if cell.font.bold:
-                        is_bold = True
-            except:
-                pass
-
-            fs = max(min(fs, 16), 5)  # clamp
-
-            # Use bold font if needed
-            font_name = FONT_BOLD if is_bold else FONT
-            c.setFont(font_name, fs)
-
-            # Alignment
             ha = cell.alignment.horizontal or 'left'
-            va = cell.alignment.vertical or 'bottom'
-            padding = 3
-
-            if ha == 'center':
-                tx = cx + cell_w / 2
-                c.drawCentredString(tx, cy + padding, val)
-            elif ha == 'right':
-                tx = cx + cell_w - padding
-                c.drawRightString(tx, cy + padding, val)
-            else:
-                c.drawString(cx + padding, cy + padding, val)
+            cells.append((cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border))
 
         y -= row_h
+
+    # ── Pass 2: 先畫背景+邊框 ──
+    for cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border in cells:
+        if has_bg:
+            c.setFillColor(colors.HexColor('#' + bg_rgb[2:]))
+            c.rect(cx, cy, cell_w, cell_h, fill=1, stroke=0)
+            c.setFillColor(colors.black)
+        if has_border:
+            c.setStrokeColor(colors.HexColor('#D9D9D9'))
+            c.setLineWidth(0.3)
+            c.rect(cx, cy, cell_w, cell_h)
+
+    # ── Pass 3: 後畫文字（唔會被背景覆蓋）──
+    for cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border in cells:
+        font_name = FONT_BOLD if is_bold else FONT
+        c.setFont(font_name, fs)
+        padding = 2
+
+        if ha == 'center':
+            c.drawCentredString(cx + cell_w / 2, cy + padding, val)
+        elif ha == 'right':
+            c.drawRightString(cx + cell_w - padding, cy + padding, val)
+        else:
+            c.drawString(cx + padding, cy + padding, val)
 
     c.save()
     buf.seek(0)
