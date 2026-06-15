@@ -20,13 +20,22 @@ MARGIN = 8 * mm
 FONT = 'Helvetica'
 FONT_BOLD = 'Helvetica-Bold'
 
-# 方法 1: Windows — 微軟正黑體 TTC（含 Regular + Bold）
-if os.path.exists('C:/Windows/Fonts/msjh.ttc'):
+# 方法 1: Windows — 細明體/PMingLiU（最穩定繁體中文 TTC）
+if os.path.exists('C:/Windows/Fonts/mingliu.ttc'):
+    try:
+        pdfmetrics.registerFont(TTFont('MingLiU', 'C:/Windows/Fonts/mingliu.ttc', subfontIndex=0))
+        pdfmetrics.registerFont(TTFont('MingLiU-B', 'C:/Windows/Fonts/mingliu.ttc', subfontIndex=1))
+        FONT = 'MingLiU'
+        FONT_BOLD = 'MingLiU-B'
+    except:
+        pass
+
+# 方法 2: Windows — 微軟正黑體
+if FONT == 'Helvetica' and os.path.exists('C:/Windows/Fonts/msjh.ttc'):
     try:
         pdfmetrics.registerFont(TTFont('MSJH', 'C:/Windows/Fonts/msjh.ttc', subfontIndex=0))
         pdfmetrics.registerFont(TTFont('MSJH-Bold', 'C:/Windows/Fonts/msjh.ttc', subfontIndex=1))
-        FONT = 'MSJH'
-        FONT_BOLD = 'MSJH-Bold'
+        FONT = 'MSJH'; FONT_BOLD = 'MSJH-Bold'
     except:
         pass
 
