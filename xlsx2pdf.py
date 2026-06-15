@@ -19,32 +19,40 @@ MARGIN = 8 * mm
 # ── CJK 字型 ──
 FONT = 'Helvetica'
 FONT_BOLD = 'Helvetica-Bold'
-_use_cid = False
 
-# 方法 1: 試系統 TTF/TTC 字型
-for path, name in [
-    ('C:/Windows/Fonts/msjh.ttc', 'MSJH'),     # 微軟正黑體
-    ('C:/Windows/Fonts/mingliu.ttc', 'MingLiU'), # 細明體
-    ('/System/Library/Fonts/PingFang.ttc', 'PingFang'),
-    ('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 'WQY'),
-]:
-    if os.path.exists(path):
-        try:
-            pdfmetrics.registerFont(TTFont(name, path))
-            FONT = name
-            FONT_BOLD = name  # TTFont supports bold via setFont(..., bold)
-            break
-        except:
-            pass
+# 方法 1: Windows — 微軟正黑體 TTC（含 Regular + Bold）
+if os.path.exists('C:/Windows/Fonts/msjh.ttc'):
+    try:
+        pdfmetrics.registerFont(TTFont('MSJH', 'C:/Windows/Fonts/msjh.ttc', subfontIndex=0))
+        pdfmetrics.registerFont(TTFont('MSJH-Bold', 'C:/Windows/Fonts/msjh.ttc', subfontIndex=1))
+        FONT = 'MSJH'
+        FONT_BOLD = 'MSJH-Bold'
+    except:
+        pass
 
-# 方法 2: reportlab 內建 CID 字型（Vercel fallback）
+# 方法 2: Mac — PingFang
+if FONT == 'Helvetica' and os.path.exists('/System/Library/Fonts/PingFang.ttc'):
+    try:
+        pdfmetrics.registerFont(TTFont('PingFang', '/System/Library/Fonts/PingFang.ttc', subfontIndex=0))
+        FONT = 'PingFang'; FONT_BOLD = 'PingFang'
+    except:
+        pass
+
+# 方法 3: Linux — WQY ZenHei
+if FONT == 'Helvetica' and os.path.exists('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'):
+    try:
+        pdfmetrics.registerFont(TTFont('WQY', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'))
+        FONT = 'WQY'; FONT_BOLD = 'WQY'
+    except:
+        pass
+
+# 方法 4: reportlab 內建 CID 字型（Vercel fallback）
 if FONT == 'Helvetica':
     try:
         pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
         pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
         FONT = 'STSong-Light'
         FONT_BOLD = 'HeiseiKakuGo-W5'
-        _use_cid = True
     except:
         pass
 
@@ -235,7 +243,7 @@ def convert_xlsx_to_pdf(xlsx_bytes):
             fs = max(min(fs, 16), 5)  # clamp
 
             # Use bold font if needed
-            font_name = FONT_BOLD if is_bold and not _use_cid else FONT
+            font_name = FONT_BOLD if is_bold else FONT
             c.setFont(font_name, fs)
 
             # Alignment
