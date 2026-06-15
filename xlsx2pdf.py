@@ -18,23 +18,35 @@ MARGIN = 8 * mm
 
 # ── CJK 字型 ──
 FONT = 'Helvetica'
+FONT_BOLD = 'Helvetica-Bold'
+_use_cid = False
+
+# 方法 1: 試系統 TTF/TTC 字型
 for path, name in [
-    ('C:/Windows/Fonts/msjh.ttc', 'MSJH'),
-    ('C:/Windows/Fonts/mingliu.ttc', 'MingLiU'),
+    ('C:/Windows/Fonts/msjh.ttc', 'MSJH'),     # 微軟正黑體
+    ('C:/Windows/Fonts/mingliu.ttc', 'MingLiU'), # 細明體
     ('/System/Library/Fonts/PingFang.ttc', 'PingFang'),
     ('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 'WQY'),
 ]:
     if os.path.exists(path):
         try:
             pdfmetrics.registerFont(TTFont(name, path))
-            FONT = name; break
-        except: pass
+            FONT = name
+            FONT_BOLD = name  # TTFont supports bold via setFont(..., bold)
+            break
+        except:
+            pass
 
+# 方法 2: reportlab 內建 CID 字型（Vercel fallback）
 if FONT == 'Helvetica':
     try:
         pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
+        pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
         FONT = 'STSong-Light'
-    except: pass
+        FONT_BOLD = 'HeiseiKakuGo-W5'
+        _use_cid = True
+    except:
+        pass
 
 
 def col_letter_to_index(letter):
@@ -208,14 +220,21 @@ def convert_xlsx_to_pdf(xlsx_bytes):
                     c.rect(cx, cy, cell_w, cell_h)
             except: pass
 
-            # Font size
+            # Font size + bold
             fs = 8
+            is_bold = False
             try:
-                if cell.font and cell.font.size:
-                    fs = min(cell.font.size * 0.75, 11)
-            except: pass
+                if cell.font:
+                    if cell.font.size:
+                        fs = max(min(cell.font.size * 0.75, 14), 6)
+                    if cell.font.bold:
+                        is_bold = True
+            except:
+                pass
 
-            c.setFont(FONT, fs)
+            # Use bold font if needed
+            font_name = FONT_BOLD if is_bold and not _use_cid else FONT
+            c.setFont(font_name, fs)
 
             # Alignment
             ha = cell.alignment.horizontal or 'left'
