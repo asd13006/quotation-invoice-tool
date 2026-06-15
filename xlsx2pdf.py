@@ -15,11 +15,14 @@ PAGE_W, PAGE_H = A4
 MARGIN = 8 * mm
 
 # 嘗試註冊 CJK 字型
+FONT = 'Helvetica'
 for path, name in [
     ('C:/Windows/Fonts/msjh.ttc', 'MSJH'),
     ('C:/Windows/Fonts/mingliu.ttc', 'MingLiU'),
+    ('C:/Windows/Fonts/msjh.ttf', 'MSJH2'),
     ('/System/Library/Fonts/PingFang.ttc', 'PingFang'),
     ('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 'WQY'),
+    ('/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc', 'NotoCJK'),
 ]:
     try:
         pdfmetrics.registerFont(TTFont(name, path))
