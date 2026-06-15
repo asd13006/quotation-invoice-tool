@@ -114,7 +114,7 @@ iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px}}
 <button class="btn-pdf" onclick="downloadPDF()">下載 PDF</button>
 <button class="btn-jpg" onclick="downloadJPG()">下載 JPG</button>
 <button class="btn-minipdf" onclick="window.open('/minipdf/','_blank')">完美 PDF (MiniPdf)</button>
-<span>v1.5.4 — MiniPdf WASM</span>
+<span>v1.5.5 — MiniPdf WASM</span>
 </div>
 <iframe src="data:application/pdf;base64,{pdf_b64}" id="pdfFrame"></iframe>
 <div id="capture" style="position:absolute;left:-9999px;top:0;width:190mm;background:#fff;padding:8mm">{capture_html}</div>
@@ -174,7 +174,7 @@ def serve_minipdf(filename='index.html'):
 
 if __name__ == '__main__':
     print('=' * 50)
-    print('裝修報價單/發票助手 v1.5.4（MiniPdf WASM）')
+    print('裝修報價單/發票助手 v1.5.5（MiniPdf WASM）')
     print('http://localhost:5000')
     print('=' * 50)
     app.run(debug=True, host='127.0.0.1', port=5000)
