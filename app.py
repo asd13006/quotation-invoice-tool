@@ -1,7 +1,7 @@
 """
-裝修報價單/發票助手 — Vercel 兼容
+裝修報價單/發票助手 — Flask 網頁後端
 """
-import io, re, uuid, base64
+import io, re, os, uuid, tempfile, subprocess, base64
 from flask import Flask, render_template, request, send_file, jsonify
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
@@ -9,6 +9,9 @@ from styles import SECTIONS
 
 app = Flask(__name__)
 _preview_cache = {}
+
+_MINIPDF = os.path.expanduser('~/.dotnet/tools/minipdf')
+if os.name == 'nt': _MINIPDF += '.exe'
 
 
 @app.route('/')
@@ -22,6 +25,7 @@ def generate():
     if not body: return jsonify({'error': '無效的請求資料'}), 400
     data = body.get('data', {})
     if not data.get('items'): return jsonify({'error': '請至少填寫一個工程項目'}), 400
+
     try:
         gen_type = body.get('type', 'quotation')
         doc_title = '發票' if gen_type == 'invoice' else '報價單'
@@ -30,12 +34,32 @@ def generate():
         generate_quotation(wb.active, data, title=doc_title)
         xlsx_buf = io.BytesIO()
         wb.save(xlsx_buf)
-        xlsx_b64 = base64.b64encode(xlsx_buf.getvalue()).decode()
+        xlsx_bytes = xlsx_buf.getvalue()
+
+        # MiniPdf: xlsx -> PDF
+        pdf_bytes = b''
+        try:
+            with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as xf:
+                xf.write(xlsx_bytes)
+                xlsx_path = xf.name
+            pdf_path = xlsx_path.replace('.xlsx', '.pdf')
+            subprocess.run([_MINIPDF, 'convert', xlsx_path, '-o', pdf_path,
+                           '--fonts', 'C:/Windows/Fonts'],
+                           capture_output=True, timeout=30)
+            with open(pdf_path, 'rb') as pf:
+                pdf_bytes = pf.read()
+            os.unlink(xlsx_path)
+            os.unlink(pdf_path)
+        except Exception:
+            pass
 
         pid = uuid.uuid4().hex[:8]
+        pdf_b64 = base64.b64encode(pdf_bytes).decode() if pdf_bytes else ''
+
+        html = _build_preview_html(pid, pdf_b64, doc_title, data)
         fname = _make_filename(data, doc_title)
-        html = _build_preview(pid, xlsx_b64, doc_title, data, fname)
-        _preview_cache[pid] = {'html': html, 'xlsx': xlsx_buf.getvalue(), '_filename': fname + '.xlsx'}
+        _preview_cache[pid] = {'html': html, 'xlsx': xlsx_bytes,
+                               '_filename': fname + '.xlsx'}
 
         return jsonify({'preview_id': pid, 'status': 'ok'})
     except Exception as e:
@@ -44,119 +68,48 @@ def generate():
 
 
 def _make_filename(data, title):
+    """(報價單號_)?(工程地址_)?(客戶姓名_)?(報價日期)_報價單/發票"""
     parts = []
-    for key in ['quotation_no', 'address', 'owner_name']:
-        v = (data.get(key, '') or '').strip()
-        if v: parts.append(v)
+    qn = data.get('quotation_no', '') or ''
+    addr = data.get('address', '') or ''
+    owner = data.get('owner_name', '') or ''
     date = (data.get('date', '') or '').replace('-', '')
-    if date: parts.append(date)
-    if not parts: parts.append('output')
+    if qn.strip(): parts.append(qn.strip())
+    if addr.strip(): parts.append(addr.strip())
+    if owner.strip(): parts.append(owner.strip())
+    if date.strip(): parts.append(date.strip())
+    if not parts: parts.append(date or 'output')
     return '_'.join(parts) + '_' + title
 
 
-def _build_preview(pid, xlsx_b64, title, data, fname):
-    from styles import SECTIONS as SEC
-    CN = ['一','二','三','四','五','六','七']
-
-    def esc(s):
-        if s is None: return '-'
-        return str(s).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
-
-    def fmt(n):
-        try: return '${:,}'.format(int(n))
-        except: return '$0'
-
-    # Items
-    si = {s['num']: [] for s in SEC}
-    for it in data.get('items', []):
-        cat = it.get('category', '')
-        for s in SEC:
-            if cat == s['cat']: si[s['num']].append(it); break
-        else: si[7].append(it)
-
-    rows = ''; sc = 0; gt = 0
-    for s in SEC:
-        items = si[s['num']]
-        if not items: continue
-        sc += 1
-        rows += f'<tr class="sec"><td colspan="7">{CN[sc-1]}、 {esc(s["title"])}</td></tr>'
-        st = 0
-        for i, it in enumerate(items):
-            seq = f'{sc}.{i+1}'
-            q = it.get('quantity',1) or 1; p = it.get('unit_price',0) or 0; a = q*p
-            st += a
-            rows += f'<tr><td class="tc">{seq}</td><td>{esc(it["description"])}</td><td class="tc">{q}</td><td class="tc">{esc(it.get("unit","項"))}</td><td class="tr">{fmt(p)}</td><td class="tr">{fmt(a)}</td><td>{esc(it.get("remark","") or "-")}</td></tr>'
-        gt += st
-        rows += f'<tr class="sub"><td colspan="4"></td><td class="tr">小計：</td><td class="tr">{fmt(st)}</td><td></td></tr>'
-
-    # Deposit
-    dep = ''
-    deposit = data.get('deposit',0)
-    if title == '發票' and deposit > 0:
-        bal = gt - deposit
-        dep = f'<tr class="tot"><td colspan="5">訂金 (Deposit)：</td><td class="tr">{fmt(deposit)}</td><td></td></tr><tr class="tot"><td colspan="5">應付尾款 (Balance Due)：</td><td class="tr">{fmt(bal)}</td><td></td></tr>'
-
-    # Payment
-    pay = ''
-    if data.get('show_payment',True):
-        payments = data.get('payments',[])
-        if payments:
-            pay = '<tr class="pt"><td colspan="4">工程付款階段說明：</td></tr><tr class="th2"><td>付款期數</td><td>比例</td><td class="tr">金額 (HKD)</td><td colspan="4">付款條件說明</td></tr>'
-            for p in payments:
-                pct = p.get('pct',0)
-                pay += f'<tr><td>{esc(p.get("label",""))}</td><td class="tc">{esc(p.get("label_pct",""))}</td><td class="tr">{fmt(int(gt*pct))}</td><td colspan="4">{esc(p.get("desc",""))}</td></tr>'
-
-    # Terms
-    terms = ''
-    if data.get('show_terms',True):
-        ts = data.get('terms',[])
-        if ts:
-            terms = '<tr class="pt"><td colspan="7">備註及條款說明：</td></tr>'
-            for i, t in enumerate(ts, 1):
-                terms += f'<tr class="tm"><td colspan="7">{i}. {esc(t)}</td></tr>'
-
-    return f'''<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>{esc(title)}</title>
+def _build_preview_html(pid, pdf_b64, title, data):
+    addr = data.get('address','') or data.get('project_name','output')
+    date_str = (data.get('date','') or '').replace('-','')
+    return f'''<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>{title}</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Microsoft JhengHei','PMingLiu',sans-serif;color:#1a1a1a;background:#e8e8e8;display:flex;justify-content:center;padding:12px}}
-.page{{width:190mm;background:#fff;padding:8mm 10mm;box-shadow:0 2px 8px rgba(0,0,0,.1)}}
-h1{{text-align:center;font-size:20pt;font-weight:bold;padding-bottom:3px;border-bottom:1px solid #ccc;margin-bottom:3mm}}
-.info td{{border:none;font-size:9pt;padding:2px 4px;line-height:1.6}}
-.il{{font-weight:bold;border:none}}
-table{{width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed;margin:2mm 0}}
-th,td{{padding:2px 4px;border:1px solid #e0e0e0;vertical-align:middle}}
-th{{font-weight:bold;text-align:center;border-bottom:2px solid #999}}
-.tc{{text-align:center}}.tr{{text-align:right}}
-.sec td{{background:#F2F2F2;font-weight:bold;font-size:9.5pt;border:none;padding:3px 4px}}
-.sub td{{background:#F2F2F2;font-weight:bold;border:none}}
-.tot td{{background:#F2F2F2;font-weight:bold;font-size:9.5pt;border:none;padding:3px 4px}}
-.pt td{{font-weight:bold;border:none;padding-top:6px}}
-.tm td{{border:none;font-size:8.5pt;color:#555;padding:1px 4px}}
-.th2 td{{font-weight:bold;border:1px solid #e0e0e0;text-align:center}}
-.bar{{position:fixed;top:8px;right:8px;display:flex;gap:6px;z-index:99}}
-.bar button{{padding:8px 14px;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:bold;color:#fff}}
-.b1{{background:#1F4E78}}.b2{{background:#2E7D32}}.b3{{background:#E65100}}
-@media print{{@page{{size:A4;margin:10mm}}body{{background:#fff;padding:0}}.page{{box-shadow:none;margin:0;padding:5mm 8mm;max-width:none;width:100%}}.bar{{display:none}}}}
+body{{background:#525659;font-family:'Microsoft JhengHei',sans-serif}}
+.bar{{position:fixed;top:0;left:0;right:0;background:#323639;padding:8px 16px;display:flex;gap:10px;z-index:99;align-items:center}}
+.bar button{{padding:8px 16px;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:bold;color:#fff}}
+.btn-excel{{background:#1F4E78}} .btn-pdf{{background:#2E7D32}} .btn-jpg{{background:#E65100}}
+.bar span{{color:#aaa;font-size:12px;margin-left:auto}}
+iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px}}
 </style></head><body>
-<div class="bar"><button class="b1" onclick="d(1)">Excel</button><button class="b2" onclick="window.print()">PDF</button><button class="b3" onclick="d(2)">JPG</button></div>
-<div class="page" id="capture">
-<h1>{esc(title)}</h1>
-<table class="info"><colgroup><col style="width:15%"><col style="width:35%"><col style="width:15%"><col style="width:35%"></colgroup>
-<tr><td class="il">工程名稱：</td><td>{esc(data.get("project_name","-"))}</td><td class="il">報價單號：</td><td>{esc(data.get("quotation_no","-"))}</td></tr>
-<tr><td class="il">客戶姓名：</td><td>{esc(data.get("owner_name","-"))}</td><td class="il">報價日期：</td><td>{esc(data.get("date","-"))}</td></tr>
-<tr><td class="il">工程地址：</td><td>{esc(data.get("address","-"))}</td><td class="il">有效期：</td><td>{esc(data.get("validity","-"))}</td></tr>
-<tr><td class="il">裝修公司：</td><td>{esc(data.get("company_name","-"))}</td><td class="il">版本：</td><td>{esc(data.get("version","-"))}</td></tr>
-</table>
-<table><colgroup><col style="width:10%"><col style="width:34%"><col style="width:6%"><col style="width:5%"><col style="width:10%"><col style="width:11%"><col style="width:24%"></colgroup>
-<thead><tr><th>項目編號</th><th style="text-align:left">工程項目及說明</th><th>數量</th><th>單位</th><th style="text-align:right">單價(HKD)</th><th style="text-align:right">複價(HKD)</th><th style="text-align:left">備註</th></tr></thead>
-<tbody>{rows}</tbody></table>
-<div style="display:flex;justify-content:flex-end;padding:4px 8px;font-weight:bold;font-size:10pt;background:#F2F2F2;margin-top:1mm">總工程預算總計 (HKD)：{fmt(gt)}</div>
-{dep}{pay}{terms}
+<div class="bar">
+<button class="btn-excel" onclick="downloadExcel()">下載 Excel</button>
+<button class="btn-pdf" onclick="downloadPDF()">下載 PDF</button>
+<button class="btn-jpg" onclick="downloadJPG()">下載 JPG</button>
+<span>預覽跟 Excel/PDF 一致</span>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<iframe src="data:application/pdf;base64,{pdf_b64}" id="pdfFrame"></iframe>
 <script>
-var X="{xlsx_b64}";var N="{fname}";
-function d(t){{if(t===1){{var b=atob(X);var a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);var bl=new Blob([a],{{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}});var u=URL.createObjectURL(bl);var l=document.createElement("a");l.href=u;l.download=N+".xlsx";l.click()}}else{{var el=document.getElementById("capture");html2canvas(el,{{scale:2,backgroundColor:"#ffffff"}}).then(function(c){{c.toBlob(function(b){{var u=URL.createObjectURL(b);var l=document.createElement("a");l.href=u;l.download=N+".jpg";l.click()}},"image/jpeg",0.92)}})}}}}
+var PID="{pid}";
+var ADDR="{addr}";
+var TITLE="{title}";
+var DATE="{date_str}";
+function downloadExcel(){{window.location.href="/download/"+PID+"/excel";}}
+function downloadPDF(){{window.location.href="/download/"+PID+"/pdf";}}
+function downloadJPG(){{window.location.href="/download/"+PID+"/jpg";}}
 </script></body></html>'''
 
 
@@ -176,7 +129,55 @@ def download_excel(pid):
                      as_attachment=True, download_name=fname)
 
 
-# ── Upload (unchanged) ──
+@app.route('/download/<pid>/pdf')
+def download_pdf(pid):
+    entry = _preview_cache.get(pid)
+    if not entry or not entry.get('xlsx'): return 'Not found', 404
+    # Re-generate PDF via MiniPdf
+    try:
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as xf:
+            xf.write(entry['xlsx']); xlsx_path = xf.name
+        pdf_path = xlsx_path.replace('.xlsx', '.pdf')
+        subprocess.run([_MINIPDF, 'convert', xlsx_path, '-o', pdf_path,
+                       '--fonts', 'C:/Windows/Fonts'], capture_output=True, timeout=30)
+        with open(pdf_path, 'rb') as pf: pdf_bytes = pf.read()
+        os.unlink(xlsx_path); os.unlink(pdf_path)
+        fname = entry.get('_filename', '報價單.xlsx').replace('.xlsx', '.pdf')
+        return send_file(io.BytesIO(pdf_bytes), mimetype='application/pdf',
+                         as_attachment=True, download_name=fname)
+    except Exception as e:
+        return f'PDF 轉換失敗：{str(e)}', 500
+
+
+@app.route('/download/<pid>/jpg')
+def download_jpg(pid):
+    entry = _preview_cache.get(pid)
+    if not entry or not entry.get('xlsx'): return 'Not found', 404
+    try:
+        # Generate PDF first
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as xf:
+            xf.write(entry['xlsx']); xlsx_path = xf.name
+        pdf_path = xlsx_path.replace('.xlsx', '.pdf')
+        subprocess.run([_MINIPDF, 'convert', xlsx_path, '-o', pdf_path,
+                       '--fonts', 'C:/Windows/Fonts'], capture_output=True, timeout=30)
+        os.unlink(xlsx_path)
+
+        # PDF -> JPG via PyMuPDF
+        import fitz
+        doc = fitz.open(pdf_path)
+        page = doc[0]
+        mat = fitz.Matrix(2, 2)  # 2x zoom
+        pix = page.get_pixmap(matrix=mat)
+        jpg_bytes = pix.tobytes('jpg')
+        doc.close()
+        os.unlink(pdf_path)
+
+        fname = entry.get('_filename', '報價單.xlsx').replace('.xlsx', '.jpg')
+        return send_file(io.BytesIO(jpg_bytes), mimetype='image/jpeg',
+                         as_attachment=True, download_name=fname)
+    except Exception as e:
+        return f'JPG 轉換失敗：{str(e)}', 500
+
 
 @app.route('/upload', methods=['POST'])
 def upload():
