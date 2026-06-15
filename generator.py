@@ -115,6 +115,7 @@ def generate_quotation(ws, data, title='報價單'):
                font=FONT_TOTAL, fill=FILL_SECTION, alignment=ALIGN_RIGHT)
     apply_cell(ws, f'F{r}', value='=' + '+'.join(subtotal_cells),
                font=FONT_TOTAL, fill=FILL_SECTION, alignment=ALIGN_RIGHT, number_format=FMT_CURRENCY)
+    apply_cell(ws, f'G{r}', fill=FILL_SECTION)
     ws.row_dimensions[r].height = ROW_HEIGHT_TOTAL
     grand_total_row = r
     r += 1

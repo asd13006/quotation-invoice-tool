@@ -194,9 +194,89 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
     </div>
     <div id="msg" class="msg"></div>
 </div>
+
+<!-- 歷史記錄 -->
+<div class="card">
+    <h2>歷史記錄</h2>
+    <div id="historyList" style="max-height:300px;overflow-y:auto;font-size:13px"></div>
+    <button class="btn btn-add" onclick="clearHistory()" style="margin-top:8px;background:#fee;color:#c00">清除全部記錄</button>
+</div>
 </div>
 
 <script>
+
+// ── 歷史記錄 ──
+function saveHistory(data, type) {
+    var hist = JSON.parse(localStorage.getItem('quoteHistory') || '[]');
+    hist.unshift({
+        time: new Date().toLocaleString(),
+        type: type === 'invoice' ? '發票' : '報價單',
+        data: data
+    });
+    if (hist.length > 20) hist = hist.slice(0, 20);
+    localStorage.setItem('quoteHistory', JSON.stringify(hist));
+    renderHistory();
+}
+function renderHistory() {
+    var hist = JSON.parse(localStorage.getItem('quoteHistory') || '[]');
+    var div = document.getElementById('historyList');
+    if (hist.length === 0) { div.innerHTML = '<p style="color:#999;padding:8px">暫無記錄</p>'; return; }
+    div.innerHTML = hist.map(function(h, i) {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #eee;cursor:pointer" onclick="loadHistory('+i+')">' +
+            '<span style="font-weight:bold;color:#002F5597">' + h.type + '</span>' +
+            '<span style="flex:1">' + (h.data.project_name || '') + ' - ' + (h.data.address || '') + '</span>' +
+            '<span style="color:#888;font-size:11px">' + h.time + '</span>' +
+            '<button class="btn btn-del" onclick="event.stopPropagation();deleteHistory('+i+')">X</button>' +
+        '</div>';
+    }).join('');
+}
+function loadHistory(idx) {
+    var hist = JSON.parse(localStorage.getItem('quoteHistory') || '[]');
+    var h = hist[idx];
+    if (!h) return;
+    var d = h.data;
+    // Fill header fields
+    ['project_name','owner_name','address','company_name','quotation_no','date','validity','version','deposit'].forEach(function(f) {
+        var el = document.getElementById(f);
+        if (el && d[f] !== undefined) el.value = d[f] || '';
+    });
+    // Fill items
+    var basicLines = [], addLines = [];
+    (d.items||[]).forEach(function(it) {
+        var line = it.description + ' ' + it.unit_price;
+        if (it.is_additional) addLines.push(line);
+        else basicLines.push(line);
+    });
+    document.getElementById('basicText').value = basicLines.join('
+');
+    document.getElementById('additionalText').value = addLines.join('
+');
+    parseItems();
+    // Payments
+    document.getElementById('paymentList').innerHTML = '';
+    (d.payments||[]).forEach(function(p) { addPayment(p); });
+    document.getElementById('showPayment').checked = d.show_payment || false;
+    // Terms
+    document.getElementById('termList').innerHTML = '';
+    (d.terms||[]).forEach(function(t) { addTerm(t); });
+    document.getElementById('showTerms').checked = d.show_terms || false;
+    updateTermNums();
+    showMsg('已載入：' + h.type + ' (' + h.time + ')', 'success');
+}
+function deleteHistory(idx) {
+    var hist = JSON.parse(localStorage.getItem('quoteHistory') || '[]');
+    hist.splice(idx, 1);
+    localStorage.setItem('quoteHistory', JSON.stringify(hist));
+    renderHistory();
+}
+function clearHistory() {
+    if (confirm('確定清除全部歷史記錄？')) {
+        localStorage.removeItem('quoteHistory');
+        renderHistory();
+    }
+}
+renderHistory();
+
 // ── Init ──
 document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
@@ -414,7 +494,7 @@ async function generate(type) {
         const result = await resp.json();
         if (result.preview_id) {
             window.open('/preview/' + result.preview_id, '_blank');
-            showMsg('生成成功！預覽頁已開啟。喺預覽頁可以下載 Excel / PDF / JPG。','success');
+            saveHistory(data, type); showMsg('生成成功！預覽頁已開啟。','success');
         }
     } catch(err) { showMsg('生成失敗：'+err.message,'error'); }
     finally { btns.forEach(b=>b.disabled=false); }
