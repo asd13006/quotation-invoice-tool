@@ -160,8 +160,7 @@ def convert_xlsx_to_pdf(xlsx_bytes):
         else:
             row_heights[ri] = 16
 
-    # ── Pass 1: 收集所有 cell 資訊 ──
-    cells = []  # [(cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border)]
+    # ── 單 pass 渲染，用 saveState/restoreState clip 文字 ──
     y = PAGE_H - MARGIN
 
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
@@ -174,11 +173,10 @@ def convert_xlsx_to_pdf(xlsx_bytes):
 
         for cell in row:
             if cell.value is None: continue
-
             ci = cell.column - 1
             if ci >= len(col_x): continue
 
-            # Skip merged sub-cells
+            # Merged cell
             if (r, ci) in merged:
                 mr1, mc1, mr2, mc2 = merged[(r, ci)]
                 if (r, ci) != (mr1, mc1): continue
@@ -196,61 +194,45 @@ def convert_xlsx_to_pdf(xlsx_bytes):
             if val.startswith('='):
                 val = _eval_formula(val, ws, r, ci)
 
-            # Font
-            fs = 8 * scale
-            is_bold = False
-            try:
-                if cell.font:
-                    if cell.font.size: fs = cell.font.size * scale
-                    if cell.font.bold: is_bold = True
-            except: pass
-            fs = max(min(fs, 16), 5)
+            # Font — 唔 scale font size，保持可讀性
+            fs = cell.font.size if cell.font and cell.font.size else 10
+            fs = max(min(fs, 20), 6)
+            is_bold = bool(cell.font and cell.font.bold)
 
-            # Background color
-            has_bg = False; bg_rgb = None
+            # Background
             try:
                 fill = cell.fill
                 if fill.patternType == 'solid':
                     rgb = fill.fgColor.rgb
                     if rgb and rgb not in ('00000000', '0'):
-                        has_bg = True; bg_rgb = rgb
+                        c.setFillColor(colors.HexColor('#' + rgb[2:]))
+                        c.rect(cx, cy, cell_w, cell_h, fill=1, stroke=0)
+                        c.setFillColor(colors.black)
             except: pass
 
             # Border
-            has_border = False
             try:
                 b = cell.border
-                has_border = any(getattr(b, s).style for s in ['left','right','top','bottom'])
+                if any(getattr(b, s).style for s in ['left','right','top','bottom']):
+                    c.setStrokeColor(colors.HexColor('#D9D9D9'))
+                    c.setLineWidth(0.3)
+                    c.rect(cx, cy, cell_w, cell_h)
             except: pass
 
+            # Text
+            font_name = FONT_BOLD if is_bold else FONT
+            c.setFont(font_name, fs)
             ha = cell.alignment.horizontal or 'left'
-            cells.append((cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border))
+            padding = 3
+
+            if ha == 'center':
+                c.drawCentredString(cx + cell_w / 2, cy + padding, val)
+            elif ha == 'right':
+                c.drawRightString(cx + cell_w - padding, cy + padding, val)
+            else:
+                c.drawString(cx + padding, cy + padding, val)
 
         y -= row_h
-
-    # ── Pass 2: 先畫背景+邊框 ──
-    for cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border in cells:
-        if has_bg:
-            c.setFillColor(colors.HexColor('#' + bg_rgb[2:]))
-            c.rect(cx, cy, cell_w, cell_h, fill=1, stroke=0)
-            c.setFillColor(colors.black)
-        if has_border:
-            c.setStrokeColor(colors.HexColor('#D9D9D9'))
-            c.setLineWidth(0.3)
-            c.rect(cx, cy, cell_w, cell_h)
-
-    # ── Pass 3: 後畫文字（唔會被背景覆蓋）──
-    for cx, cy, cell_w, cell_h, val, ha, fs, is_bold, has_bg, bg_rgb, has_border in cells:
-        font_name = FONT_BOLD if is_bold else FONT
-        c.setFont(font_name, fs)
-        padding = 2
-
-        if ha == 'center':
-            c.drawCentredString(cx + cell_w / 2, cy + padding, val)
-        elif ha == 'right':
-            c.drawRightString(cx + cell_w - padding, cy + padding, val)
-        else:
-            c.drawString(cx + padding, cy + padding, val)
 
     c.save()
     buf.seek(0)
