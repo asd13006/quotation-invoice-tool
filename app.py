@@ -1,7 +1,7 @@
 """
-裝修報價單/發票助手 — Flask 網頁後端 (Vercel 兼容)
+裝修報價單/發票助手 — Vercel 兼容
 """
-import io, re, os, uuid, base64
+import io, re, uuid, base64
 from flask import Flask, render_template, request, send_file, jsonify
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
@@ -22,7 +22,6 @@ def generate():
     if not body: return jsonify({'error': '無效的請求資料'}), 400
     data = body.get('data', {})
     if not data.get('items'): return jsonify({'error': '請至少填寫一個工程項目'}), 400
-
     try:
         gen_type = body.get('type', 'quotation')
         doc_title = '發票' if gen_type == 'invoice' else '報價單'
@@ -34,148 +33,14 @@ def generate():
         xlsx_b64 = base64.b64encode(xlsx_buf.getvalue()).decode()
 
         pid = uuid.uuid4().hex[:8]
-        html = _build_preview(pid, xlsx_b64, doc_title, data)
-        _preview_cache[pid] = {'html': html, 'xlsx': xlsx_buf.getvalue()}
+        fname = _make_filename(data, doc_title)
+        html = _build_preview(pid, xlsx_b64, doc_title, data, fname)
+        _preview_cache[pid] = {'html': html, 'xlsx': xlsx_buf.getvalue(), '_filename': fname + '.xlsx'}
 
         return jsonify({'preview_id': pid, 'status': 'ok'})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({'error': f'生成失敗：{str(e)}'}), 500
-
-
-def _build_preview(pid, xlsx_b64, title, data):
-    """Build print-friendly A4 HTML preview matching Excel layout"""
-    import re as _re
-
-    def esc(s):
-        if s is None: return '-'
-        return str(s).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
-
-    def fmt(n):
-        try: return '${:,}'.format(int(n))
-        except: return '$0'
-
-    addr = data.get('address','') or data.get('project_name','output')
-    date_str = (data.get('date','') or '').replace('-','')
-    fname = _make_filename(data, title)
-
-    # ═══ Build items table rows ═══
-    from styles import SECTIONS as SEC, CN_NUMS
-    section_items = {s['num']: [] for s in SEC}
-    for it in data.get('items', []):
-        cat = it.get('category', '')
-        for s in SEC:
-            if cat == s['cat']: section_items[s['num']].append(it); break
-        else: section_items[7].append(it)
-
-    rows_html = ''
-    section_counter = 0
-    grand_total = 0
-
-    for s in SEC:
-        items = section_items[s['num']]
-        if not items: continue
-        section_counter += 1
-        rows_html += '<tr class="section"><td colspan="7">' + CN_NUMS[section_counter-1] + '、 ' + esc(s['title']) + '</td></tr>'
-        sec_total = 0
-        for i, it in enumerate(items):
-            seq = str(section_counter) + '.' + str(i+1)
-            qty = it.get('quantity', 1) or 1
-            price = it.get('unit_price', 0) or 0
-            amt = qty * price
-            sec_total += amt
-            rows_html += '<tr><td class="tc">' + seq + '</td><td>' + esc(it['description']) + '</td><td class="tc">' + str(qty) + '</td><td class="tc">' + esc(it.get('unit','項')) + '</td><td class="tr">' + fmt(price) + '</td><td class="tr">' + fmt(amt) + '</td><td>' + esc(it.get('remark','') or '-') + '</td></tr>'
-        grand_total += sec_total
-        rows_html += '<tr class="subtotal"><td colspan="4"></td><td class="tr">小計：</td><td class="tr">' + fmt(sec_total) + '</td><td></td></tr>'
-
-    # Deposit
-    deposit_html = ''
-    deposit = data.get('deposit', 0)
-    if title == '發票' and deposit > 0:
-        balance = grand_total - deposit
-        deposit_html = '<tr class="total-row"><td colspan="5">訂金 (Deposit)：</td><td class="tr">' + fmt(deposit) + '</td><td></td></tr>'
-        deposit_html += '<tr class="total-row"><td colspan="5">應付尾款 (Balance Due)：</td><td class="tr">' + fmt(balance) + '</td><td></td></tr>'
-
-    # Payment
-    payment_html = ''
-    if data.get('show_payment', True):
-        payments = data.get('payments', [])
-        if payments:
-            payment_html = '<tr class="pay-title"><td colspan="4">工程付款階段說明：</td></tr>'
-            payment_html += '<tr class="th-row"><td>付款期數</td><td>比例</td><td class="tr">金額 (HKD)</td><td colspan="4">付款條件說明</td></tr>'
-            for p in payments:
-                pct = p.get('pct', 0)
-                payment_html += '<tr><td>' + esc(p.get('label','')) + '</td><td class="tc">' + esc(p.get('label_pct','')) + '</td><td class="tr">' + fmt(int(grand_total*pct)) + '</td><td colspan="4">' + esc(p.get('desc','')) + '</td></tr>'
-
-    # Terms
-    terms_html = ''
-    if data.get('show_terms', True):
-        terms = data.get('terms', [])
-        if terms:
-            terms_html = '<tr class="terms-title"><td colspan="7">備註及條款說明：</td></tr>'
-            for i, t in enumerate(terms, 1):
-                terms_html += '<tr class="term"><td colspan="7">' + str(i) + '. ' + esc(t) + '</td></tr>'
-
-    return '''<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>{title}</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Microsoft JhengHei','PMingLiu',sans-serif;color:#1a1a1a;background:#e8e8e8;display:flex;justify-content:center;padding:12px}}
-.page{{width:190mm;background:#fff;padding:8mm 10mm;box-shadow:0 2px 8px rgba(0,0,0,.1)}}
-h1{{text-align:center;font-size:20pt;font-weight:bold;padding-bottom:3px;border-bottom:1px solid #ccc;margin-bottom:3mm}}
-table{{width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed;margin:2mm 0}}
-col.col-a{{width:10%}}col.col-b{{width:34%}}col.col-c{{width:6%}}col.col-d{{width:5%}}col.col-e{{width:10%}}col.col-f{{width:11%}}col.col-g{{width:24%}}
-.info td{{border:none;font-size:9pt;padding:2px 4px;line-height:1.6}}
-.info-l{{font-weight:bold;border:none}}
-th,td{{padding:2px 4px;border:1px solid #e0e0e0;vertical-align:middle}}
-th{{font-weight:bold;text-align:center;border-bottom:2px solid #999}}
-.tc{{text-align:center}}.tr{{text-align:right}}
-.section td{{background:#F2F2F2;font-weight:bold;font-size:9.5pt;border:none;padding:3px 4px}}
-.subtotal td{{background:#F2F2F2;font-weight:bold;border:none}}
-.total-row td{{background:#F2F2F2;font-weight:bold;font-size:9.5pt;border:none;padding:3px 4px}}
-.pay-title td,.terms-title td{{font-weight:bold;border:none;padding-top:6px}}
-.term td{{border:none;font-size:8.5pt;color:#555;padding:1px 4px}}
-.th-row td{{font-weight:bold;border:1px solid #e0e0e0;text-align:center}}
-.bar{{position:fixed;top:8px;right:8px;display:flex;gap:6px;z-index:99}}
-.bar button{{padding:8px 14px;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:bold;color:#fff}}
-.btn-excel{{background:#1F4E78}}.btn-pdf{{background:#2E7D32}}.btn-jpg{{background:#E65100}}
-@media print{{@page{{size:A4;margin:10mm}}body{{background:#fff;padding:0}}.page{{box-shadow:none;margin:0;padding:5mm 8mm;max-width:none;width:100%}}.bar{{display:none}}}}
-</style></head><body>
-<div class="bar">
-<button class="btn-excel" onclick="dExcel()">Excel</button>
-<button class="btn-pdf" onclick="window.print()">PDF</button>
-<button class="btn-jpg" onclick="dJPG()">JPG</button>
-</div>
-<div class="page" id="capture">
-<h1>{title}</h1>
-<table class="info"><colgroup><col style="width:15%"><col style="width:35%"><col style="width:15%"><col style="width:35%"></colgroup>
-<tr><td class="info-l">工程名稱：</td><td>{pname}</td><td class="info-l">報價單號：</td><td>{qno}</td></tr>
-<tr><td class="info-l">客戶姓名：</td><td>{owner}</td><td class="info-l">報價日期：</td><td>{dt}</td></tr>
-<tr><td class="info-l">工程地址：</td><td>{addr_val}</td><td class="info-l">有效期：</td><td>{valid}</td></tr>
-<tr><td class="info-l">裝修公司：</td><td>{comp}</td><td class="info-l">版本：</td><td>{ver}</td></tr>
-</table>
-<table><colgroup><col class="col-a"><col class="col-b"><col class="col-c"><col class="col-d"><col class="col-e"><col class="col-f"><col class="col-g"></colgroup>
-<thead><tr><th>項目編號</th><th style="text-align:left">工程項目及說明</th><th>數量</th><th>單位</th><th style="text-align:right">單價(HKD)</th><th style="text-align:right">複價(HKD)</th><th style="text-align:left">備註</th></tr></thead>
-<tbody>{rows}</tbody>
-</table>
-<div class="total-row" style="display:flex;justify-content:flex-end;padding:4px 8px;font-weight:bold;font-size:10pt;margin-top:1mm">
-<span>總工程預算總計 (HKD)：{gt}</span></div>
-{dep}{pay}{terms}
-</div>
-<script>
-var PID="{pid}";var XLSX="{xlsx_b64}";var FNAME="{fname}";
-function dExcel(){{var b=atob(XLSX);var a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);var blob=new Blob([a],{{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}});var u=URL.createObjectURL(blob);var l=document.createElement("a");l.href=u;l.download=FNAME+".xlsx";l.click()}}
-async function dJPG(){{var el=document.getElementById("capture");var w=el.offsetWidth;var canvas=await html2canvas(el,{{width:w,scale:2,backgroundColor:"#ffffff",windowWidth:w}});canvas.toBlob(function(b){{var u=URL.createObjectURL(b);var l=document.createElement("a");l.href=u;l.download=FNAME+".jpg";l.click()}},"image/jpeg",0.92)}}
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-</body></html>'''.format(
-        title=esc(title), rows=rows_html,
-        pname=esc(data.get('project_name','-')), qno=esc(data.get('quotation_no','-')),
-        owner=esc(data.get('owner_name','-')), dt=esc(data.get('date','-')),
-        addr_val=esc(data.get('address','-')), valid=esc(data.get('validity','-')),
-        comp=esc(data.get('company_name','-')), ver=esc(data.get('version','-')),
-        gt=fmt(grand_total), dep=deposit_html, pay=payment_html, terms=terms_html,
-        pid=pid, xlsx_b64=xlsx_b64, fname=fname,
-    )
 
 
 def _make_filename(data, title):
@@ -187,6 +52,112 @@ def _make_filename(data, title):
     if date: parts.append(date)
     if not parts: parts.append('output')
     return '_'.join(parts) + '_' + title
+
+
+def _build_preview(pid, xlsx_b64, title, data, fname):
+    from styles import SECTIONS as SEC
+    CN = ['一','二','三','四','五','六','七']
+
+    def esc(s):
+        if s is None: return '-'
+        return str(s).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
+
+    def fmt(n):
+        try: return '${:,}'.format(int(n))
+        except: return '$0'
+
+    # Items
+    si = {s['num']: [] for s in SEC}
+    for it in data.get('items', []):
+        cat = it.get('category', '')
+        for s in SEC:
+            if cat == s['cat']: si[s['num']].append(it); break
+        else: si[7].append(it)
+
+    rows = ''; sc = 0; gt = 0
+    for s in SEC:
+        items = si[s['num']]
+        if not items: continue
+        sc += 1
+        rows += f'<tr class="sec"><td colspan="7">{CN[sc-1]}、 {esc(s["title"])}</td></tr>'
+        st = 0
+        for i, it in enumerate(items):
+            seq = f'{sc}.{i+1}'
+            q = it.get('quantity',1) or 1; p = it.get('unit_price',0) or 0; a = q*p
+            st += a
+            rows += f'<tr><td class="tc">{seq}</td><td>{esc(it["description"])}</td><td class="tc">{q}</td><td class="tc">{esc(it.get("unit","項"))}</td><td class="tr">{fmt(p)}</td><td class="tr">{fmt(a)}</td><td>{esc(it.get("remark","") or "-")}</td></tr>'
+        gt += st
+        rows += f'<tr class="sub"><td colspan="4"></td><td class="tr">小計：</td><td class="tr">{fmt(st)}</td><td></td></tr>'
+
+    # Deposit
+    dep = ''
+    deposit = data.get('deposit',0)
+    if title == '發票' and deposit > 0:
+        bal = gt - deposit
+        dep = f'<tr class="tot"><td colspan="5">訂金 (Deposit)：</td><td class="tr">{fmt(deposit)}</td><td></td></tr><tr class="tot"><td colspan="5">應付尾款 (Balance Due)：</td><td class="tr">{fmt(bal)}</td><td></td></tr>'
+
+    # Payment
+    pay = ''
+    if data.get('show_payment',True):
+        payments = data.get('payments',[])
+        if payments:
+            pay = '<tr class="pt"><td colspan="4">工程付款階段說明：</td></tr><tr class="th2"><td>付款期數</td><td>比例</td><td class="tr">金額 (HKD)</td><td colspan="4">付款條件說明</td></tr>'
+            for p in payments:
+                pct = p.get('pct',0)
+                pay += f'<tr><td>{esc(p.get("label",""))}</td><td class="tc">{esc(p.get("label_pct",""))}</td><td class="tr">{fmt(int(gt*pct))}</td><td colspan="4">{esc(p.get("desc",""))}</td></tr>'
+
+    # Terms
+    terms = ''
+    if data.get('show_terms',True):
+        ts = data.get('terms',[])
+        if ts:
+            terms = '<tr class="pt"><td colspan="7">備註及條款說明：</td></tr>'
+            for i, t in enumerate(ts, 1):
+                terms += f'<tr class="tm"><td colspan="7">{i}. {esc(t)}</td></tr>'
+
+    return f'''<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>{esc(title)}</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:'Microsoft JhengHei','PMingLiu',sans-serif;color:#1a1a1a;background:#e8e8e8;display:flex;justify-content:center;padding:12px}}
+.page{{width:190mm;background:#fff;padding:8mm 10mm;box-shadow:0 2px 8px rgba(0,0,0,.1)}}
+h1{{text-align:center;font-size:20pt;font-weight:bold;padding-bottom:3px;border-bottom:1px solid #ccc;margin-bottom:3mm}}
+.info td{{border:none;font-size:9pt;padding:2px 4px;line-height:1.6}}
+.il{{font-weight:bold;border:none}}
+table{{width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed;margin:2mm 0}}
+th,td{{padding:2px 4px;border:1px solid #e0e0e0;vertical-align:middle}}
+th{{font-weight:bold;text-align:center;border-bottom:2px solid #999}}
+.tc{{text-align:center}}.tr{{text-align:right}}
+.sec td{{background:#F2F2F2;font-weight:bold;font-size:9.5pt;border:none;padding:3px 4px}}
+.sub td{{background:#F2F2F2;font-weight:bold;border:none}}
+.tot td{{background:#F2F2F2;font-weight:bold;font-size:9.5pt;border:none;padding:3px 4px}}
+.pt td{{font-weight:bold;border:none;padding-top:6px}}
+.tm td{{border:none;font-size:8.5pt;color:#555;padding:1px 4px}}
+.th2 td{{font-weight:bold;border:1px solid #e0e0e0;text-align:center}}
+.bar{{position:fixed;top:8px;right:8px;display:flex;gap:6px;z-index:99}}
+.bar button{{padding:8px 14px;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:bold;color:#fff}}
+.b1{{background:#1F4E78}}.b2{{background:#2E7D32}}.b3{{background:#E65100}}
+@media print{{@page{{size:A4;margin:10mm}}body{{background:#fff;padding:0}}.page{{box-shadow:none;margin:0;padding:5mm 8mm;max-width:none;width:100%}}.bar{{display:none}}}}
+</style></head><body>
+<div class="bar"><button class="b1" onclick="d(1)">Excel</button><button class="b2" onclick="window.print()">PDF</button><button class="b3" onclick="d(2)">JPG</button></div>
+<div class="page" id="capture">
+<h1>{esc(title)}</h1>
+<table class="info"><colgroup><col style="width:15%"><col style="width:35%"><col style="width:15%"><col style="width:35%"></colgroup>
+<tr><td class="il">工程名稱：</td><td>{esc(data.get("project_name","-"))}</td><td class="il">報價單號：</td><td>{esc(data.get("quotation_no","-"))}</td></tr>
+<tr><td class="il">客戶姓名：</td><td>{esc(data.get("owner_name","-"))}</td><td class="il">報價日期：</td><td>{esc(data.get("date","-"))}</td></tr>
+<tr><td class="il">工程地址：</td><td>{esc(data.get("address","-"))}</td><td class="il">有效期：</td><td>{esc(data.get("validity","-"))}</td></tr>
+<tr><td class="il">裝修公司：</td><td>{esc(data.get("company_name","-"))}</td><td class="il">版本：</td><td>{esc(data.get("version","-"))}</td></tr>
+</table>
+<table><colgroup><col style="width:10%"><col style="width:34%"><col style="width:6%"><col style="width:5%"><col style="width:10%"><col style="width:11%"><col style="width:24%"></colgroup>
+<thead><tr><th>項目編號</th><th style="text-align:left">工程項目及說明</th><th>數量</th><th>單位</th><th style="text-align:right">單價(HKD)</th><th style="text-align:right">複價(HKD)</th><th style="text-align:left">備註</th></tr></thead>
+<tbody>{rows}</tbody></table>
+<div style="display:flex;justify-content:flex-end;padding:4px 8px;font-weight:bold;font-size:10pt;background:#F2F2F2;margin-top:1mm">總工程預算總計 (HKD)：{fmt(gt)}</div>
+{dep}{pay}{terms}
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+var X="{xlsx_b64}";var N="{fname}";
+function d(t){{if(t===1){{var b=atob(X);var a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);var bl=new Blob([a],{{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}});var u=URL.createObjectURL(bl);var l=document.createElement("a");l.href=u;l.download=N+".xlsx";l.click()}}else{{var el=document.getElementById("capture");html2canvas(el,{{scale:2,backgroundColor:"#ffffff"}}).then(function(c){{c.toBlob(function(b){{var u=URL.createObjectURL(b);var l=document.createElement("a");l.href=u;l.download=N+".jpg";l.click()}},"image/jpeg",0.92)}})}}}}
+</script></body></html>'''
 
 
 @app.route('/preview/<pid>')
@@ -204,6 +175,8 @@ def download_excel(pid):
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                      as_attachment=True, download_name=fname)
 
+
+# ── Upload (unchanged) ──
 
 @app.route('/upload', methods=['POST'])
 def upload():
