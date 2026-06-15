@@ -115,15 +115,7 @@ iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px}}
 <button class="btn-jpg" onclick="downloadJPG()">下載 JPG</button>
 <span>v1.1.0 — 純 Python PDF，Vercel 相容</span>
 </div>
-<div style="display:flex;align-items:center;justify-content:center;height:calc(100vh - 44px);margin-top:44px;flex-direction:column;gap:16px">
-<div style="color:#fff;font-size:18px">PDF 已生成，請下載查看（瀏覽器內嵌 PDF 可能顯示不完整）</div>
-<div style="display:flex;gap:12px">
-<a href="/download/{pid}/excel" style="background:#1F4E78;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">下載 Excel</a>
-<a href="/download/{pid}/pdf" style="background:#2E7D32;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">下載 PDF</a>
-<button onclick="downloadJPG()" style="background:#E65100;color:#fff;padding:12px 24px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;font-size:14px">下載 JPG</button>
-</div>
-<iframe src="data:application/pdf;base64,{pdf_b64}" id="pdfFrame" style="width:100%;flex:1;border:none"></iframe>
-</div>
+<iframe src="data:application/pdf;base64,{pdf_b64}" id="pdfFrame"></iframe>
 <div id="capture" style="position:absolute;left:-9999px;top:0;width:190mm;background:#fff;padding:8mm">{capture_html}</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>

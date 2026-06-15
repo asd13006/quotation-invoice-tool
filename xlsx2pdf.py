@@ -243,6 +243,11 @@ def convert_xlsx_to_pdf(xlsx_bytes):
 
         y -= row_h
 
+    # 頁尾底線
+    c.setStrokeColor(colors.HexColor('#999999'))
+    c.setLineWidth(0.5)
+    c.line(MARGIN, MARGIN + 5, PAGE_W - MARGIN, MARGIN + 5)
+
     c.save()
     buf.seek(0)
     return buf.read()
