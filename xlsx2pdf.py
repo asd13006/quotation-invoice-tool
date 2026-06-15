@@ -2,32 +2,44 @@
 純 Python xlsx → PDF 渲染器（同 MiniPdf 做法一樣）
 讀取 xlsx 每個 cell 嘅位置、樣式、內容 → 精確渲染 PDF
 """
-import io
+import io, os
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas as pdfcanvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from openpyxl import load_workbook
 
 PAGE_W, PAGE_H = A4
 MARGIN = 8 * mm
 
-# 嘗試註冊 CJK 字型
+# 註冊 CJK 字型
 FONT = 'Helvetica'
+FONT_CJK = None
+
+# 方法1：嘗試系統 TTF/TTC 字型
 for path, name in [
     ('C:/Windows/Fonts/msjh.ttc', 'MSJH'),
     ('C:/Windows/Fonts/mingliu.ttc', 'MingLiU'),
-    ('C:/Windows/Fonts/msjh.ttf', 'MSJH2'),
     ('/System/Library/Fonts/PingFang.ttc', 'PingFang'),
     ('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 'WQY'),
-    ('/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc', 'NotoCJK'),
 ]:
+    if os.path.exists(path):
+        try:
+            pdfmetrics.registerFont(TTFont(name, path))
+            FONT = name
+            break
+        except:
+            pass
+
+# 方法2：用 reportlab 內建 CID 字型（唔使外部檔案，Vercel 相容）
+if FONT == 'Helvetica':
     try:
-        pdfmetrics.registerFont(TTFont(name, path))
-        FONT = name
-        break
+        pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
+        FONT = 'STSong-Light'
+        FONT_CJK = True
     except:
         pass
 
