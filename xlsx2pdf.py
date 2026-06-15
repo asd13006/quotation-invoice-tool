@@ -1,12 +1,15 @@
 """
 純 Python xlsx → PDF 渲染器（追 MiniPdf 100% 品質）
-Canvas-based，逐格精確渲染，跟足 cell font/size/bold/color/border
+platypus.Table + dynamic ParagraphStyle per cell
 """
 import io, os, re
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
-from reportlab.pdfgen import canvas as pdfcanvas
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus.flowables import HRFlowable
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
@@ -28,8 +31,8 @@ for path, name in [
     if os.path.exists(path):
         try:
             pdfmetrics.registerFont(TTFont(name, path, subfontIndex=0))
-            pdfmetrics.registerFont(TTFont(name+'-Bold', path, subfontIndex=1))
-            FONT = name; FONT_BOLD = name+'-Bold'
+            pdfmetrics.registerFont(TTFont(name + '-B', path, subfontIndex=1))
+            FONT = name; FONT_BOLD = name + '-B'
             break
         except:
             pass
@@ -52,6 +55,7 @@ def _eval_formula(formula, ws, row, col):
         return formula
     try:
         expr = formula[1:]
+
         def cv(ref):
             m = re.match(r'\$?([A-G])\$?(\d+)', ref)
             if not m: return 0
@@ -61,6 +65,7 @@ def _eval_formula(formula, ws, row, col):
                 return float(_eval_formula(v, ws, int(m.group(2)), 0) or 0)
             try: return float(v)
             except: return 0
+
         expr = re.sub(r'\$?([A-G])\$?(\d+)', lambda m: str(cv(m.group(0))), expr)
         expr = re.sub(r'SUM\(([A-G]\d+):([A-G]\d+)\)',
                       lambda m: str(_sum_range(ws, m.group(1), m.group(2))),
@@ -81,7 +86,8 @@ def _sum_range(ws, s, e):
     for r in range(r1, r2 + 1):
         v = ws[f'{col}{r}'].value
         if v is None: continue
-        if isinstance(v, str) and v.startswith('='): v = _eval_formula(v, ws, r, 0)
+        if isinstance(v, str) and v.startswith('='):
+            v = _eval_formula(v, ws, r, 0)
         try: t += float(v)
         except: pass
     return t
@@ -97,10 +103,52 @@ def _fmt_currency(val):
 
 def _is_currency(cell):
     try:
-        nf = cell.number_format or ''
+        nf = str(cell.number_format or '')
         return '$' in nf or '#,##0' in nf
     except:
         return False
+
+
+def _get_cell_style(cell, base_size=10):
+    """Create a unique ParagraphStyle for this cell's formatting"""
+    fn = FONT
+    fs = base_size
+    fc = colors.black
+    ha = TA_LEFT
+
+    try:
+        if cell.font:
+            if cell.font.size:
+                fs = max(min(cell.font.size, 26), 6)
+            if cell.font.bold:
+                fn = FONT_BOLD
+            if cell.font.color and cell.font.color.rgb:
+                rgb = cell.font.color.rgb
+                if rgb not in ('00000000', '0'):
+                    fc = colors.HexColor('#' + rgb[2:])
+    except: pass
+
+    try:
+        if cell.alignment and cell.alignment.horizontal:
+            if cell.alignment.horizontal == 'center': ha = TA_CENTER
+            elif cell.alignment.horizontal == 'right': ha = TA_RIGHT
+    except: pass
+
+    # Cache key for style reuse
+    key = (fn, fs, str(fc), ha)
+    if not hasattr(_get_cell_style, 'cache'):
+        _get_cell_style.cache = {}
+
+    if key in _get_cell_style.cache:
+        return _get_cell_style.cache[key]
+
+    style = ParagraphStyle(
+        f'cell_{len(_get_cell_style.cache)}',
+        fontName=fn, fontSize=fs, leading=fs + 3,
+        textColor=fc, alignment=ha,
+    )
+    _get_cell_style.cache[key] = style
+    return style
 
 
 def convert_xlsx_to_pdf(xlsx_bytes):
@@ -108,7 +156,10 @@ def convert_xlsx_to_pdf(xlsx_bytes):
     ws = wb.active
 
     buf = io.BytesIO()
-    c = pdfcanvas.Canvas(buf, pagesize=A4)
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=MARGIN, rightMargin=MARGIN,
+                            topMargin=MARGIN, bottomMargin=MARGIN)
+    story = []
 
     # ── Merged cells ──
     merged = {}
@@ -129,148 +180,113 @@ def convert_xlsx_to_pdf(xlsx_bytes):
 
     total_w = sum(col_widths)
     scale = (PAGE_W - 2 * MARGIN) / max(total_w, 1)
+    col_w = [w * scale for w in col_widths]
 
-    col_x = []
-    x = MARGIN
-    for w in col_widths:
-        col_x.append(x)
-        x += w * scale
-
-    # ── Row heights ──
-    row_heights = {}
-    for ri in range(1, ws.max_row + 1):
-        h = ws.row_dimensions.get(ri)
-        row_heights[ri] = (h.height * 0.75) if (h and h.height) else 14
-
-    # ── Pass 1: collect all cell render data ──
-    cells = []  # list of dicts
-    y = PAGE_H - MARGIN
+    # ── Build table data row by row ──
+    table_data = []
+    row_map = []  # map table_data index → xlsx row number
+    table_row = 0
 
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
         r = row[0].row
-        rh = row_heights.get(r, 14)
+        row_cells = []
+        has_any = False
 
         for cell in row:
             ci = cell.column - 1
-            if ci >= len(col_x) or cell.value is None:
+            if ci >= len(col_w):
                 continue
 
-            # Merged cell
+            # Skip merged sub-cells
             if (r, ci) in merged:
                 mr1, mc1, mr2, mc2 = merged[(r, ci)]
                 if (r, ci) != (mr1, mc1):
+                    row_cells.append(None)  # placeholder
                     continue
-                cw = sum(col_widths[mc1:mc2+1]) * scale
-                ch = sum(row_heights.get(ri, 14) for ri in range(mr1, mr2+1))
-                cx = col_x[mc1]
-                cy = y - sum(row_heights.get(ri, 14) for ri in range(r, mr2+1))
-            else:
-                cw = col_widths[ci] * scale
-                ch = rh
-                cx = col_x[ci]
-                cy = y - rh
 
-            # Cell value
+            if cell.value is None:
+                row_cells.append('')
+                continue
+
             val = str(cell.value)
             if val.startswith('='):
                 val = _eval_formula(val, ws, r, ci)
-
-            # Currency format
-            if _is_currency(cell) and val.lstrip('-').replace('.','',1).isdigit():
+            if _is_currency(cell) and val.lstrip('-').replace('.', '', 1).isdigit():
                 val = _fmt_currency(val)
 
-            # Font properties
-            font_name = FONT
-            font_size = 8
-            font_color = colors.black
-            is_bold = False
-            try:
-                if cell.font:
-                    if cell.font.size: font_size = cell.font.size
-                    if cell.font.bold: is_bold = True
-                    if cell.font.color and cell.font.color.rgb:
-                        rgb = cell.font.color.rgb
-                        if rgb not in ('00000000', '0'):
-                            font_color = colors.HexColor('#' + rgb[2:])
-            except: pass
+            val = val.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            style = _get_cell_style(cell)
+            para = Paragraph(val, style)
+            row_cells.append(para)
+            has_any = True
 
-            font_name = FONT_BOLD if is_bold else FONT
-            font_size = max(min(font_size, 24), 5)
+        if has_any or any(c is not None and c != '' for c in row_cells):
+            # Fill None placeholders with empty Paragraph
+            row_cells = [c if c is not None else Paragraph('', _get_cell_style(ws.cell(row=r, column=1))) for c in row_cells]
+            # Ensure all rows have same column count
+            while len(row_cells) < len(col_w):
+                row_cells.append('')
+            table_data.append(row_cells)
+            row_map.append(r)
+            table_row += 1
 
-            # Alignment
-            ha = 'left'
-            try:
-                if cell.alignment and cell.alignment.horizontal:
-                    ha = cell.alignment.horizontal
-            except: pass
+    # ── Table styles ──
+    style_cmds = [
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+    ]
 
-            # Background
-            bg_color = None
-            try:
-                fill = cell.fill
-                if fill.patternType == 'solid':
-                    rgb = fill.fgColor.rgb
-                    if rgb and rgb not in ('00000000', '0'):
-                        bg_color = colors.HexColor('#' + rgb[2:])
-            except: pass
+    # Scan xlsx again to build merge/bg/border commands
+    for ti, r in enumerate(row_map):
+        for cell in ws.iter_rows(min_row=r, max_row=r):
+            for cell in cell:
+                ci = cell.column - 1
+                if ci >= len(col_w):
+                    continue
 
-            # Border
-            border_color = None
-            try:
-                b = cell.border
-                for side in [b.left, b.right, b.top, b.bottom]:
-                    if side and side.style:
-                        border_color = colors.HexColor('#D9D9D9')
-                        break
-            except: pass
+                # SPAN
+                if (r, ci) in merged:
+                    mr1, mc1, mr2, mc2 = merged[(r, ci)]
+                    if (r, ci) == (mr1, mc1):
+                        # Find target table rows
+                        end_ti = ti
+                        for tj, rj in enumerate(row_map):
+                            if rj == mr2:
+                                end_ti = tj; break
+                        if mc2 < len(col_w):
+                            style_cmds.append(('SPAN', (mc1, ti), (mc2, end_ti)))
 
-            cells.append({
-                'cx': cx, 'cy': cy, 'cw': cw, 'ch': ch,
-                'val': val, 'ha': ha,
-                'font_name': font_name, 'font_size': font_size, 'font_color': font_color,
-                'bg_color': bg_color, 'border_color': border_color,
-            })
+                # BACKGROUND
+                try:
+                    fill = cell.fill
+                    if fill.patternType == 'solid':
+                        rgb = fill.fgColor.rgb
+                        if rgb and rgb not in ('00000000', '0'):
+                            style_cmds.append(('BACKGROUND', (ci, ti), (ci, ti),
+                                              colors.HexColor('#' + rgb[2:])))
+                except: pass
 
-        y -= rh
+                # BOX border
+                try:
+                    b = cell.border
+                    if any(getattr(b, s).style for s in ['left', 'right', 'top', 'bottom']):
+                        style_cmds.append(('BOX', (ci, ti), (ci, ti), 0.3,
+                                          colors.HexColor('#D9D9D9')))
+                except: pass
 
-    # ── Pass 2: backgrounds (bottom layer) ──
-    for cell in cells:
-        if cell['bg_color']:
-            c.setFillColor(cell['bg_color'])
-            c.rect(cell['cx'], cell['cy'], cell['cw'], cell['ch'], fill=1, stroke=0)
+    # ── Build and render ──
+    t = Table(table_data, colWidths=col_w, repeatRows=0)
+    t.setStyle(TableStyle(style_cmds))
+    story.append(t)
 
-    # ── Pass 3: borders (middle layer) ──
-    for cell in cells:
-        if cell['border_color']:
-            c.setStrokeColor(cell['border_color'])
-            c.setLineWidth(0.3)
-            c.rect(cell['cx'], cell['cy'], cell['cw'], cell['ch'])
+    # Footer line
+    story.append(Spacer(1, 5 * mm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#999999')))
 
-    # ── Pass 4: text (top layer) ──
-    # Reset to fill/stroke defaults
-    c.setStrokeColor(colors.black)
-    c.setLineWidth(1)
-
-    for cell in cells:
-        c.setFont(cell['font_name'], cell['font_size'])
-        c.setFillColor(cell['font_color'])
-        val = cell['val']
-        cx, cy, cw, ch = cell['cx'], cell['cy'], cell['cw'], cell['ch']
-        padding = 2
-
-        if cell['ha'] == 'center':
-            c.drawCentredString(cx + cw/2, cy + padding, val)
-        elif cell['ha'] == 'right':
-            c.drawRightString(cx + cw - padding, cy + padding, val)
-        else:
-            c.drawString(cx + padding, cy + padding, val)
-
-    # ── 頁尾底線 ──
-    c.setStrokeColor(colors.HexColor('#999999'))
-    c.setLineWidth(0.5)
-    c.line(MARGIN, MARGIN + 5, PAGE_W - MARGIN, MARGIN + 5)
-
-    c.save()
+    doc.build(story)
     buf.seek(0)
     return buf.read()
 
@@ -285,7 +301,6 @@ if __name__ == '__main__':
 
     input_path = sys.argv[1]
     output_path = input_path.replace('.xlsx', '.pdf')
-
     i = 2
     while i < len(sys.argv):
         if sys.argv[i] == '-o' and i + 1 < len(sys.argv):
