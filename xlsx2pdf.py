@@ -42,24 +42,55 @@ def col_letter_to_index(letter):
 
 
 def _eval_formula(formula, ws, row, col):
-    """簡單公式求值：=C9*E9 → qty * price"""
+    """公式求值：支援 =C*E, =SUM(F9:F12), =F13+F18, =F29*0.2 等"""
     if not formula.startswith('='):
         return formula
     try:
-        # =C*E pattern
         expr = formula[1:]
-        for letter in ['A','B','C','D','E','F','G']:
-            if letter in expr:
-                cell_val = ws[f'{letter}{row}'].value
-                if cell_val is None: cell_val = 0
-                expr = expr.replace(letter + str(row), str(cell_val))
-        # Also handle $letter$row pattern
         import re
-        expr = re.sub(r'\$?([A-G])\$?(\d+)', lambda m: str(ws[f'{m.group(1)}{m.group(2)}'].value or 0), expr)
+
+        # Helper: get cell value as number
+        def cell_val(ref):
+            m = re.match(r'\$?([A-G])\$?(\d+)', ref)
+            if m:
+                v = ws[f'{m.group(1)}{m.group(2)}'].value
+                if v is None: return 0
+                if isinstance(v, str) and v.startswith('='):
+                    return float(_eval_formula(v, ws, int(m.group(2)), 0) or 0)
+                return float(v) if v else 0
+            return 0
+
+        # Replace cell references with values
+        expr = re.sub(r'\$?([A-G])\$?(\d+)', lambda m: str(cell_val(m.group(0))), expr)
+
+        # Handle SUM(range) → sum of range
+        expr = re.sub(r'SUM\(([A-G]\d+):([A-G]\d+)\)', lambda m: str(_sum_range(ws, m.group(1), m.group(2))), expr, flags=re.IGNORECASE)
+
         result = eval(expr)
-        return str(int(result)) if isinstance(result, float) and result == int(result) else str(result)
-    except:
+        if isinstance(result, float) and result == int(result):
+            result = int(result)
+        return str(result)
+    except Exception as e:
         return '0'
+
+
+def _sum_range(ws, start_ref, end_ref):
+    """計算 SUM(F9:F12) 嘅值"""
+    import re
+    m1 = re.match(r'\$?([A-G])\$?(\d+)', start_ref)
+    m2 = re.match(r'\$?([A-G])\$?(\d+)', end_ref)
+    if not m1 or not m2: return 0
+    col = m1.group(1)
+    r1, r2 = int(m1.group(2)), int(m2.group(2))
+    total = 0
+    for r in range(r1, r2 + 1):
+        v = ws[f'{col}{r}'].value
+        if v is None: continue
+        if isinstance(v, str) and v.startswith('='):
+            v = _eval_formula(v, ws, r, 0)
+        try: total += float(v)
+        except: pass
+    return total
 
 
 def convert_xlsx_to_pdf(xlsx_bytes):
