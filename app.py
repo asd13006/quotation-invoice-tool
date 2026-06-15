@@ -13,6 +13,35 @@ _preview_cache = {}
 _MINIPDF = os.path.expanduser('~/.dotnet/tools/minipdf')
 if os.name == 'nt': _MINIPDF += '.exe'
 
+# 跨平台字型路徑
+if os.name == 'nt':
+    _FONT_DIR = 'C:/Windows/Fonts'
+elif os.path.exists('/System/Library/Fonts'):
+    _FONT_DIR = '/System/Library/Fonts'
+else:
+    _FONT_DIR = '/usr/share/fonts'
+
+
+def _has_minipdf():
+    return os.path.exists(_MINIPDF)
+
+
+def _xlsx_to_pdf(xlsx_bytes):
+    """用 MiniPdf 將 xlsx 轉 PDF，返回 bytes"""
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as xf:
+        xf.write(xlsx_bytes)
+        xlsx_path = xf.name
+    pdf_path = xlsx_path.replace('.xlsx', '.pdf')
+    try:
+        subprocess.run([_MINIPDF, 'convert', xlsx_path, '-o', pdf_path,
+                       '--fonts', _FONT_DIR],
+                       capture_output=True, timeout=30, check=True)
+        with open(pdf_path, 'rb') as pf:
+            return pf.read()
+    finally:
+        if os.path.exists(xlsx_path): os.unlink(xlsx_path)
+        if os.path.exists(pdf_path): os.unlink(pdf_path)
+
 
 @app.route('/')
 def index():
@@ -38,20 +67,8 @@ def generate():
 
         # MiniPdf: xlsx -> PDF
         pdf_bytes = b''
-        try:
-            with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as xf:
-                xf.write(xlsx_bytes)
-                xlsx_path = xf.name
-            pdf_path = xlsx_path.replace('.xlsx', '.pdf')
-            subprocess.run([_MINIPDF, 'convert', xlsx_path, '-o', pdf_path,
-                           '--fonts', 'C:/Windows/Fonts'],
-                           capture_output=True, timeout=30)
-            with open(pdf_path, 'rb') as pf:
-                pdf_bytes = pf.read()
-            os.unlink(xlsx_path)
-            os.unlink(pdf_path)
-        except Exception:
-            pass
+        if _has_minipdf():
+            pdf_bytes = _xlsx_to_pdf(xlsx_bytes)
 
         pid = uuid.uuid4().hex[:8]
         pdf_b64 = base64.b64encode(pdf_bytes).decode() if pdf_bytes else ''
@@ -133,15 +150,10 @@ def download_excel(pid):
 def download_pdf(pid):
     entry = _preview_cache.get(pid)
     if not entry or not entry.get('xlsx'): return 'Not found', 404
-    # Re-generate PDF via MiniPdf
+    if not _has_minipdf():
+        return '需要安裝 MiniPdf 先可以下載 PDF。請參考 README.md 安裝。', 500
     try:
-        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as xf:
-            xf.write(entry['xlsx']); xlsx_path = xf.name
-        pdf_path = xlsx_path.replace('.xlsx', '.pdf')
-        subprocess.run([_MINIPDF, 'convert', xlsx_path, '-o', pdf_path,
-                       '--fonts', 'C:/Windows/Fonts'], capture_output=True, timeout=30)
-        with open(pdf_path, 'rb') as pf: pdf_bytes = pf.read()
-        os.unlink(xlsx_path); os.unlink(pdf_path)
+        pdf_bytes = _xlsx_to_pdf(entry['xlsx'])
         fname = entry.get('_filename', '報價單.xlsx').replace('.xlsx', '.pdf')
         return send_file(io.BytesIO(pdf_bytes), mimetype='application/pdf',
                          as_attachment=True, download_name=fname)
@@ -153,25 +165,17 @@ def download_pdf(pid):
 def download_jpg(pid):
     entry = _preview_cache.get(pid)
     if not entry or not entry.get('xlsx'): return 'Not found', 404
+    if not _has_minipdf():
+        return '需要安裝 MiniPdf 先可以下載 JPG。請參考 README.md 安裝。', 500
     try:
-        # Generate PDF first
-        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as xf:
-            xf.write(entry['xlsx']); xlsx_path = xf.name
-        pdf_path = xlsx_path.replace('.xlsx', '.pdf')
-        subprocess.run([_MINIPDF, 'convert', xlsx_path, '-o', pdf_path,
-                       '--fonts', 'C:/Windows/Fonts'], capture_output=True, timeout=30)
-        os.unlink(xlsx_path)
-
-        # PDF -> JPG via PyMuPDF
+        pdf_bytes = _xlsx_to_pdf(entry['xlsx'])
         import fitz
-        doc = fitz.open(pdf_path)
+        doc = fitz.open(stream=pdf_bytes, filetype='pdf')
         page = doc[0]
-        mat = fitz.Matrix(2, 2)  # 2x zoom
+        mat = fitz.Matrix(2, 2)
         pix = page.get_pixmap(matrix=mat)
         jpg_bytes = pix.tobytes('jpg')
         doc.close()
-        os.unlink(pdf_path)
-
         fname = entry.get('_filename', '報價單.xlsx').replace('.xlsx', '.jpg')
         return send_file(io.BytesIO(jpg_bytes), mimetype='image/jpeg',
                          as_attachment=True, download_name=fname)
