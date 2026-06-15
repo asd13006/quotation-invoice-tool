@@ -41,6 +41,27 @@ def col_letter_to_index(letter):
     return column_index_from_string(letter) - 1
 
 
+def _eval_formula(formula, ws, row, col):
+    """簡單公式求值：=C9*E9 → qty * price"""
+    if not formula.startswith('='):
+        return formula
+    try:
+        # =C*E pattern
+        expr = formula[1:]
+        for letter in ['A','B','C','D','E','F','G']:
+            if letter in expr:
+                cell_val = ws[f'{letter}{row}'].value
+                if cell_val is None: cell_val = 0
+                expr = expr.replace(letter + str(row), str(cell_val))
+        # Also handle $letter$row pattern
+        import re
+        expr = re.sub(r'\$?([A-G])\$?(\d+)', lambda m: str(ws[f'{m.group(1)}{m.group(2)}'].value or 0), expr)
+        result = eval(expr)
+        return str(int(result)) if isinstance(result, float) and result == int(result) else str(result)
+    except:
+        return '0'
+
+
 def convert_xlsx_to_pdf(xlsx_bytes):
     wb = load_workbook(io.BytesIO(xlsx_bytes))
     ws = wb.active
@@ -131,7 +152,8 @@ def convert_xlsx_to_pdf(xlsx_bytes):
                 cy = y - row_h
 
             val = str(cell.value)
-            if val.startswith('='): continue
+            if val.startswith('='):
+                val = _eval_formula(val, ws, r, ci)
             val = val[:100]
 
             # Background
