@@ -38,15 +38,7 @@ if FONT == 'Helvetica' and os.path.exists('/System/Library/Fonts/PingFang.ttc'):
     except:
         pass
 
-# 方法 3: Linux — WQY ZenHei
-if FONT == 'Helvetica' and os.path.exists('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'):
-    try:
-        pdfmetrics.registerFont(TTFont('WQY', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'))
-        FONT = 'WQY'; FONT_BOLD = 'WQY'
-    except:
-        pass
-
-# 方法 4: reportlab 內建 CID 字型（Vercel fallback）
+# 方法 3: reportlab 內建 CID 字型（Vercel/Linux fallback）
 if FONT == 'Helvetica':
     try:
         pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
@@ -205,7 +197,7 @@ def convert_xlsx_to_pdf(xlsx_bytes):
             val = str(cell.value)
             if val.startswith('='):
                 val = _eval_formula(val, ws, r, ci)
-            val = val[:100]
+            # 唔好 truncate 中文，render 時自然會被 cell width 限制視覺效果
 
             # Background
             try:
