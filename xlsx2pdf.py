@@ -220,17 +220,19 @@ def convert_xlsx_to_pdf(xlsx_bytes):
                     c.rect(cx, cy, cell_w, cell_h)
             except: pass
 
-            # Font size + bold
-            fs = 8
+            # Font size + bold (跟足 xlsx，font.size 已係 point size)
+            fs = 8 * scale  # default scaled
             is_bold = False
             try:
                 if cell.font:
                     if cell.font.size:
-                        fs = max(min(cell.font.size * 0.75, 14), 6)
+                        fs = cell.font.size * scale  # 直接用 xlsx point size，配合 scale
                     if cell.font.bold:
                         is_bold = True
             except:
                 pass
+
+            fs = max(min(fs, 16), 5)  # clamp
 
             # Use bold font if needed
             font_name = FONT_BOLD if is_bold and not _use_cid else FONT
