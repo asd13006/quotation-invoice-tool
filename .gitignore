@@ -8,3 +8,4 @@ __pycache__/
 !templates/*.html
 *.files/
 .env
+MiniPdf_src/

@@ -2,7 +2,7 @@
 裝修報價單/發票助手 — Flask 後端（Vercel 相容，純 Python）
 """
 import io, re, uuid, base64
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
 from styles import SECTIONS
@@ -105,7 +105,7 @@ def _build_preview_html(pid, pdf_b64, title, data, xlsx_bytes):
 body{{background:#525659;font-family:'Microsoft JhengHei',sans-serif}}
 .bar{{position:fixed;top:0;left:0;right:0;background:#323639;padding:8px 16px;display:flex;gap:10px;z-index:99;align-items:center}}
 .bar button{{padding:8px 16px;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:bold;color:#fff}}
-.btn-excel{{background:#1F4E78}} .btn-pdf{{background:#2E7D32}} .btn-jpg{{background:#E65100}}
+.btn-excel{{background:#1F4E78}} .btn-pdf{{background:#2E7D32}} .btn-jpg{{background:#E65100}} .btn-minipdf{{background:#6A1B9A}}
 .bar span{{color:#aaa;font-size:12px;margin-left:auto}}
 iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px}}
 </style></head><body>
@@ -113,7 +113,8 @@ iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px}}
 <button class="btn-excel" onclick="downloadExcel()">下載 Excel</button>
 <button class="btn-pdf" onclick="downloadPDF()">下載 PDF</button>
 <button class="btn-jpg" onclick="downloadJPG()">下載 JPG</button>
-<span>v1.1.0 — 純 Python PDF，Vercel 相容</span>
+<button class="btn-minipdf" onclick="window.open('/minipdf/','_blank')">完美 PDF (MiniPdf)</button>
+<span>v1.5.0 — MiniPdf WASM</span>
 </div>
 <iframe src="data:application/pdf;base64,{pdf_b64}" id="pdfFrame"></iframe>
 <div id="capture" style="position:absolute;left:-9999px;top:0;width:190mm;background:#fff;padding:8mm">{capture_html}</div>
@@ -156,9 +157,16 @@ def _build_capture_html(xlsx_bytes):
     return h
 
 
+@app.route('/minipdf/')
+@app.route('/minipdf/<path:filename>')
+def serve_minipdf(filename='index.html'):
+    """Serve MiniPdf WASM static files"""
+    return send_from_directory('static/minipdf', filename)
+
+
 if __name__ == '__main__':
     print('=' * 50)
-    print('裝修報價單/發票助手 v1.1.0（Vercel 相容）')
+    print('裝修報價單/發票助手 v1.5.0（MiniPdf WASM）')
     print('http://localhost:5000')
     print('=' * 50)
     app.run(debug=True, host='127.0.0.1', port=5000)
