@@ -1,12 +1,20 @@
 """
 裝修報價單/發票助手 — Flask 後端（Vercel 相容，純 Python）
 """
-import io, re, os, uuid, base64
+import io, re, os, uuid, base64, mimetypes
 from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
 from styles import SECTIONS
 from xlsx2pdf import convert_xlsx_to_pdf
+
+# WASM MIME types — must be set at module level
+mimetypes.add_type('application/wasm', '.wasm')
+mimetypes.add_type('application/octet-stream', '.dll')
+mimetypes.add_type('application/octet-stream', '.dat')
+mimetypes.add_type('application/json', '.json')
+mimetypes.add_type('application/json', '.br')
+mimetypes.add_type('application/javascript', '.js')
 
 app = Flask(__name__)
 _preview_cache = {}
@@ -164,14 +172,8 @@ def _build_capture_html(xlsx_bytes):
 @app.route('/minipdf/')
 @app.route('/minipdf/<path:filename>')
 def serve_minipdf(filename='index.html'):
-    """Serve MiniPdf WASM static files with correct MIME types"""
-    import os as _os, mimetypes as _mt
-    base = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'minipdf')
-    # Ensure correct MIME types for WASM
-    _mt.add_type('application/wasm', '.wasm')
-    _mt.add_type('application/octet-stream', '.dll')
-    _mt.add_type('application/octet-stream', '.dat')
-    _mt.add_type('application/json', '.json')
+    """Serve MiniPdf WASM static files"""
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'minipdf')
     return send_from_directory(base, filename)
 
 
