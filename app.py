@@ -1,25 +1,15 @@
 """
-裝修報價單/發票助手 — Flask 後端（Vercel 相容，純 Python）
+裝修報價單/發票助手 — Flask 後端（Vercel 相容）
 """
-import io, re, os, uuid, base64, mimetypes
-from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
+import io, re, os, uuid, base64
+from flask import Flask, render_template, request, send_file, jsonify
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
 from styles import SECTIONS
-from xlsx2pdf import convert_xlsx_to_pdf
-
-# WASM MIME types — must be set at module level
-mimetypes.add_type('application/wasm', '.wasm')
-mimetypes.add_type('application/octet-stream', '.dll')
-mimetypes.add_type('application/octet-stream', '.dat')
-mimetypes.add_type('application/json', '.json')
-mimetypes.add_type('application/json', '.br')
-mimetypes.add_type('application/javascript', '.js')
 
 app = Flask(__name__)
 _preview_cache = {}
 
-# 統一版本號 - 從 VERSION 檔案讀取
 _VERSION = open(os.path.join(os.path.dirname(__file__), 'VERSION')).read().strip()
 
 
@@ -34,28 +24,18 @@ def generate():
     if not body: return jsonify({'error': '無效的請求資料'}), 400
     data = body.get('data', {})
     if not data.get('items'): return jsonify({'error': '請至少填寫一個工程項目'}), 400
-
     try:
         gen_type = body.get('type', 'quotation')
         doc_title = '發票' if gen_type == 'invoice' else '報價單'
-
-        # Excel
         wb = Workbook()
         generate_quotation(wb.active, data, title=doc_title)
         xlsx_buf = io.BytesIO()
         wb.save(xlsx_buf)
         xlsx_bytes = xlsx_buf.getvalue()
-
-        # PDF (pure Python xlsx -> PDF)
-        pdf_bytes = convert_xlsx_to_pdf(xlsx_bytes)
-        pdf_b64 = base64.b64encode(pdf_bytes).decode()
-
         pid = uuid.uuid4().hex[:8]
         fname = _make_filename(data, doc_title)
-        html = _build_preview_html(pid, pdf_b64, doc_title, data, xlsx_bytes)
-
+        html = _build_download_page(pid, doc_title, data)
         _preview_cache[pid] = {'html': html, 'xlsx': xlsx_bytes, '_filename': fname + '.xlsx'}
-
         return jsonify({'preview_id': pid, 'status': 'ok'})
     except Exception as e:
         import traceback; traceback.print_exc()
@@ -78,23 +58,7 @@ def download_excel(pid):
                      as_attachment=True, download_name=fname)
 
 
-@app.route('/download/<pid>/pdf')
-def download_pdf(pid):
-    entry = _preview_cache.get(pid)
-    if not entry or not entry.get('xlsx'): return 'Not found', 404
-    try:
-        pdf_bytes = convert_xlsx_to_pdf(entry['xlsx'])
-        fname = entry.get('_filename', '報價單.xlsx').replace('.xlsx', '.pdf')
-        return send_file(io.BytesIO(pdf_bytes), mimetype='application/pdf',
-                         as_attachment=True, download_name=fname)
-    except Exception as e:
-        return f'PDF 轉換失敗：{str(e)}', 500
-
-
-# ── Helpers ──
-
 def _make_filename(data, title):
-    """(報價單號_)?(工程地址_)?(客戶姓名_)?(報價日期)_報價單/發票"""
     parts = []
     for key in ['quotation_no', 'address', 'owner_name']:
         v = (data.get(key, '') or '').strip()
@@ -105,84 +69,34 @@ def _make_filename(data, title):
     return '_'.join(parts) + '_' + title
 
 
-def _build_preview_html(pid, pdf_b64, title, data, xlsx_bytes):
+def _build_download_page(pid, title, data):
     addr = data.get('address','') or data.get('project_name','output')
     date_str = (data.get('date','') or '').replace('-','')
-    capture_html = _build_capture_html(xlsx_bytes)
-
-    return f'''<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>{title}</title>
+    return f"""<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>{title}</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:#525659;font-family:'Microsoft JhengHei',sans-serif}}
-.bar{{position:fixed;top:0;left:0;right:0;background:#323639;padding:8px 16px;display:flex;gap:10px;z-index:99;align-items:center}}
-.bar button{{padding:8px 16px;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:bold;color:#fff}}
-.btn-excel{{background:#1F4E78}} .btn-pdf{{background:#2E7D32}} .btn-jpg{{background:#E65100}} .btn-minipdf{{background:#6A1B9A}}
-.bar span{{color:#aaa;font-size:12px;margin-left:auto}}
-	iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px;display:none}}
-	iframe.active{{display:block}}
+body{{background:#f0f2f5;font-family:'Microsoft JhengHei',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}}
+.card{{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1);padding:40px;text-align:center;max-width:420px}}
+h1{{font-size:22px;color:#002F5597;margin-bottom:10px}}
+p{{color:#666;margin-bottom:24px;font-size:14px}}
+.btn{{display:block;width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;cursor:pointer;font-weight:bold;color:#fff;margin-bottom:10px;text-decoration:none}}
+.btn-excel{{background:#1F4E78}}
+.btn-back{{background:#888;font-size:13px;padding:10px}}
+.ver{{color:#aaa;font-size:12px;margin-top:16px}}
 </style></head><body>
-<div class="bar">
-<button class="btn-excel" onclick="downloadExcel()">下載 Excel</button>
-<button class="btn-pdf" onclick="downloadPDF()">下載 PDF</button>
-	<button class="btn-pdf active" onclick="showTab('pdf')">PDF 預覽</button>
-<button class="btn-minipdf" onclick="window.open('/minipdf/','_blank')">完美 PDF (MiniPdf)</button>
-	<button class="btn-minipdf" onclick="showTab('minipdf')">MiniPdf 完美轉換</button>
-	<span>{_VERSION}</span>
-<iframe src="data:application/pdf;base64,{pdf_b64}" id="pdfFrame"></iframe>
-<div id="capture" style="position:absolute;left:-9999px;top:0;width:190mm;background:#fff;padding:8mm">{capture_html}</div>
-	<iframe src="data:application/pdf;base64,{pdf_b64}" id="tab-pdf" class="active"></iframe>
-	<iframe src="https://mini-software.github.io/MiniPdf/" id="tab-minipdf"></iframe>
-<script>
-var PID="{pid}";var ADDR="{addr}";var TITLE="{title}";var DATE="{date_str}";
-function downloadExcel(){{window.location.href="/download/"+PID+"/excel";}}
-	function showTab(t){{document.querySelectorAll("iframe").forEach(function(f){{f.classList.remove("active")}});document.getElementById("tab-"+t).classList.add("active");document.querySelectorAll(".bar button").forEach(function(b){{b.classList.remove("active")}});event.target.classList.add("active");}}
-	function downloadPDF(){{window.location.href="/download/"+PID+"/pdf";}}
-async function downloadJPG(){{var el=document.getElementById("capture");var canvas=await html2canvas(el,{{scale:2,backgroundColor:"#ffffff"}});canvas.toBlob(function(blob){{var url=URL.createObjectURL(blob);var link=document.createElement("a");link.href=url;link.download=ADDR+"_"+TITLE+"_"+DATE+".jpg";link.click();URL.revokeObjectURL(url);}},"image/jpeg",0.92);}}
-</script></body></html>'''
-
-
-def _build_capture_html(xlsx_bytes):
-    """由 xlsx 生成簡單 HTML table 畀 html2canvas 截圖"""
-    wb = load_workbook(io.BytesIO(xlsx_bytes), data_only=True)
-    ws = wb.active
-    h = '<table style="border-collapse:collapse;font-size:9pt;width:100%;font-family:Microsoft JhengHei,sans-serif">'
-    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
-        h += '<tr>'
-        for cell in row:
-            val = str(cell.value or '').replace('&','&amp;').replace('<','&lt;')
-            if val.startswith('='): val = ''
-            style = 'border:1px solid #d9d9d9;padding:2px 4px;'
-            try:
-                if cell.fill.patternType == 'solid':
-                    rgb = cell.fill.fgColor.rgb
-                    if rgb and rgb not in ('00000000','0'): style += 'background:#' + rgb[2:] + ';'
-            except: pass
-            try:
-                if cell.font and cell.font.bold: style += 'font-weight:bold;'
-            except: pass
-            ha = 'left'
-            try:
-                if cell.alignment.horizontal: ha = cell.alignment.horizontal
-            except: pass
-            style += 'text-align:' + ha + ';'
-            h += f'<td style="{style}">{val}</td>'
-        h += '</tr>'
-    h += '</table>'
-    return h
-
-
-@app.route('/minipdf')
-@app.route('/minipdf/')
-@app.route('/minipdf/<path:filename>')
-def serve_minipdf(filename='index.html'):
-    """Serve MiniPdf WASM static files"""
-    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'minipdf')
-    return send_from_directory(base, filename)
+<div class="card">
+<h1>{doc_title}已生成</h1>
+<p>{addr} - {date_str}</p>
+<a class="btn btn-excel" href="/download/{pid}/excel">下載 Excel</a>
+<a class="btn btn-back" href="/">返回主頁</a>
+<div class="ver">{_VERSION}</div>
+</div>
+</body></html>"""
 
 
 if __name__ == '__main__':
     print('=' * 50)
-    print(f'裝修報價單/發票助手 {_VERSION}（MiniPdf WASM）')
+    print(f'裝修報價單/發票助手 {_VERSION}')
     print('http://localhost:5000')
     print('=' * 50)
     app.run(debug=True, host='127.0.0.1', port=5000)
