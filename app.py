@@ -1,7 +1,7 @@
 """
 裝修報價單/發票助手 — Flask 後端（Vercel 相容，純 Python）
 """
-import io, re, uuid, base64
+import io, re, os, uuid, base64
 from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
