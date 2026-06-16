@@ -118,22 +118,25 @@ body{{background:#525659;font-family:'Microsoft JhengHei',sans-serif}}
 .bar button{{padding:8px 16px;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:bold;color:#fff}}
 .btn-excel{{background:#1F4E78}} .btn-pdf{{background:#2E7D32}} .btn-jpg{{background:#E65100}} .btn-minipdf{{background:#6A1B9A}}
 .bar span{{color:#aaa;font-size:12px;margin-left:auto}}
-iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px}}
+	iframe{{border:none;width:100%;height:calc(100vh - 44px);margin-top:44px;display:none}}
+	iframe.active{{display:block}}
 </style></head><body>
 <div class="bar">
 <button class="btn-excel" onclick="downloadExcel()">下載 Excel</button>
 <button class="btn-pdf" onclick="downloadPDF()">下載 PDF</button>
-<button class="btn-jpg" onclick="downloadJPG()">下載 JPG</button>
+	<button class="btn-pdf active" onclick="showTab('pdf')">PDF 預覽</button>
 <button class="btn-minipdf" onclick="window.open('/minipdf/','_blank')">完美 PDF (MiniPdf)</button>
-<span>{_VERSION} — MiniPdf WASM</span>
-</div>
+	<button class="btn-minipdf" onclick="showTab('minipdf')">MiniPdf 完美轉換</button>
+	<span>{_VERSION}</span>
 <iframe src="data:application/pdf;base64,{pdf_b64}" id="pdfFrame"></iframe>
 <div id="capture" style="position:absolute;left:-9999px;top:0;width:190mm;background:#fff;padding:8mm">{capture_html}</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	<iframe src="data:application/pdf;base64,{pdf_b64}" id="tab-pdf" class="active"></iframe>
+	<iframe src="https://mini-software.github.io/MiniPdf/" id="tab-minipdf"></iframe>
 <script>
 var PID="{pid}";var ADDR="{addr}";var TITLE="{title}";var DATE="{date_str}";
 function downloadExcel(){{window.location.href="/download/"+PID+"/excel";}}
-function downloadPDF(){{window.location.href="/download/"+PID+"/pdf";}}
+	function showTab(t){{document.querySelectorAll("iframe").forEach(function(f){{f.classList.remove("active")}});document.getElementById("tab-"+t).classList.add("active");document.querySelectorAll(".bar button").forEach(function(b){{b.classList.remove("active")}});event.target.classList.add("active");}}
+	function downloadPDF(){{window.location.href="/download/"+PID+"/pdf";}}
 async function downloadJPG(){{var el=document.getElementById("capture");var canvas=await html2canvas(el,{{scale:2,backgroundColor:"#ffffff"}});canvas.toBlob(function(blob){{var url=URL.createObjectURL(blob);var link=document.createElement("a");link.href=url;link.download=ADDR+"_"+TITLE+"_"+DATE+".jpg";link.click();URL.revokeObjectURL(url);}},"image/jpeg",0.92);}}
 </script></body></html>'''
 
