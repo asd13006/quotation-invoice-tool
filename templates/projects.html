@@ -30,9 +30,9 @@
 <div class="project-list" style="background:none;box-shadow:none;border:none">
 {% for g in grouped %}
 {% if g.type == 'year' %}
-{% if not loop.first %}</div>{% endif %}
-<div class="year-card">
-<div class="year-header">{{ g.label }}</div>
+{% if not loop.first %}</details>{% endif %}
+<details class="year-card" open>
+<summary class="year-header">{{ g.label }}</summary>
 {% elif g.type == 'month' %}
 <div class="month-header">
 <span class="month-label">{{ g.label }}</span>
@@ -48,6 +48,7 @@
 </div>
 {% endif %}
 {% endfor %}
+</details>
 </div>
 {% else %}
 <div class="card"><div class="empty-hint">未找到工程單。請確保已分享 Google Drive folder 給 Service Account。</div></div>
