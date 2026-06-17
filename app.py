@@ -72,8 +72,9 @@ def upload():
             r = row[0].row
             a = str(ws.cell(row=r, column=1).value or '').strip()
             b = str(ws.cell(row=r, column=2).value or '').strip()
-            # Look for sequence number pattern
-            if re.match(r'^\d+[\.\)]?\s*$', a) and len(b) > 2:
+            # Look for sequence number: "1", "1)", "1.1", "2.3" etc
+            is_seq = bool(re.match(r'^\d+[\.\)]?\s*$', a) or re.match(r'^\d+\.\d+$', a))
+            if is_seq and len(b) > 2:
                 # Unit price is in column E (5th column)
                 e = ws.cell(row=r, column=5).value
                 price = int(e) if isinstance(e, (int, float)) else 0
