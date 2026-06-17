@@ -29,9 +29,11 @@
 {% if grouped %}
 <div class="project-list">
 {% for g in grouped %}
-{% if g.type == 'header' %}
+{% if g.type == 'year' %}
+<div class="year-header" data-search="{{ g.label }}"><span>{{ g.label }}</span></div>
+{% elif g.type == 'month' %}
 <div class="month-header" data-search="{{ g.label }}">
-<span class="month-label">{{ g.label[:4] }}年{{ g.label[5:7]|int }}月</span>
+<span class="month-label">{{ g.label }}</span>
 <span class="month-count">{{ g.count }} 張單</span>
 </div>
 {% else %}
