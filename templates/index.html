@@ -84,6 +84,14 @@ tbody td.col-amount { font-weight: bold; color: #002F5597; font-size: 13px; }
 
 .empty-hint { text-align: center; padding: 30px; color: #999; }
 
+/* Modal */
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center }
+.modal-overlay.show { display:flex }
+.modal { background:#fff; border-radius:12px; padding:32px; text-align:center; max-width:380px; width:90%; box-shadow:0 8px 30px rgba(0,0,0,0.2) }
+.modal h3 { color:#002F5597; margin-bottom:8px; font-size:18px }
+.modal p { color:#666; font-size:13px; margin-bottom:20px; word-break:break-all }
+.modal .btn { margin-bottom:8px }
+
 details { margin-top: 12px; }
 details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #002F5597; padding: 8px 0; }
 .pay-row, .term-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
@@ -193,6 +201,14 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
         <button class="btn-gen" onclick="generate('invoice')">生成發票</button>
     </div>
     <div id="msg" class="msg"></div>
+</div>
+<!-- Modal -->
+<div class="modal-overlay" id="dlg">
+<div class="modal">
+<h3 id="dlgTitle">已生成</h3>
+<p id="dlgFile"></p>
+<a class="btn btn-gen" id="dlgLink" href="#" style="display:block;background:#1F4E78;color:#fff;text-decoration:none">下載 Excel</a>
+<button class="btn" onclick="document.getElementById('dlg').classList.remove('show')" style="background:#888;color:#fff;width:100%">關閉</button>
 </div>
 </div>
 
@@ -413,8 +429,11 @@ async function generate(type) {
         if (!resp.ok) { const err=await resp.json(); throw new Error(err.error||'生成失敗'); }
         const result = await resp.json();
         if (result.preview_id) {
-            window.open('/preview/' + result.preview_id, '_blank');
-            showMsg('生成成功！預覽頁已開啟。','success');
+            document.getElementById('dlgTitle').textContent = (type==='invoice'?'發票':'報價單') + '已生成';
+            document.getElementById('dlgFile').textContent = data.address||data.project_name||'';
+            document.getElementById('dlgLink').href = '/download/' + result.preview_id + '/excel';
+            document.getElementById('dlg').classList.add('show');
+            showMsg('','');
         }
     } catch(err) { showMsg('生成失敗：'+err.message,'error'); }
     finally { btns.forEach(b=>b.disabled=false); }
