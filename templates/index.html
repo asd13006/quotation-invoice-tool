@@ -326,7 +326,7 @@ function parseTextBlock(text, isAdditional) {
         const m = t.match(/^(\d+)[.\s、．]*\s*(.+?)\s+(\d+)\s*$/);
         if (m) { items.push({is_additional:isAdditional, category:autoCategorize(m[2].trim()), description:m[2].trim(), quantity:1, unit:'項', unit_price:parseInt(m[3],10), remark:''}); continue; }
         const lm = t.match(/^(.+?)\s+(\d+)\s*$/);
-        if (lm) { const d=lm[1].replace(/^\d+[.\s、．]*\s*/,'').trim(); if(d&&parseInt(lm[2],10)>0) { items.push({is_additional:isAdditional, category:autoCategorize(d), description:d, quantity:1, unit:'項', unit_price:parseInt(lm[2],10), remark:''}); continue; } }
+        if (lm) { const d=lm[1].replace(/^\d+[.\s、．]*\s*/,'').trim(); if(d&&parseInt(lm[2],10)>=0) { items.push({is_additional:isAdditional, category:autoCategorize(d), description:d, quantity:1, unit:'項', unit_price:parseInt(lm[2],10), remark:''}); continue; } }
         const nm = t.match(/^(\d+)[.\s、．]*\s*(.+)$/);
         if (nm) { const d=nm[2].trim(); if(d) { items.push({is_additional:isAdditional, category:autoCategorize(d), description:d, quantity:1, unit:'項', unit_price:0, remark:''}); continue; } }
         if (t.length>1) items.push({is_additional:isAdditional, category:autoCategorize(t), description:t, quantity:1, unit:'項', unit_price:0, remark:''});

@@ -74,12 +74,13 @@ def upload():
             b = str(ws.cell(row=r, column=2).value or '').strip()
             # Look for sequence number pattern
             if re.match(r'^\d+[\.\)]?\s*$', a) and len(b) > 2:
-                price = 0
-                for c in range(3, 8):
-                    v = ws.cell(row=r, column=c).value
-                    if isinstance(v, (int, float)) and float(v) > 0:
-                        price = int(v); break
-                items.append({'category': '雜項', 'description': b, 'quantity': 1,
+                # Unit price is in column E (5th column)
+                e = ws.cell(row=r, column=5).value
+                price = int(e) if isinstance(e, (int, float)) else 0
+                # qty from column C (3rd column)
+                c = ws.cell(row=r, column=3).value
+                qty = int(c) if isinstance(c, (int, float)) and float(c) > 0 else 1
+                items.append({'category': '雜項', 'description': b, 'quantity': qty,
                               'unit': '項', 'unit_price': price, 'remark': '',
                               'is_additional': False})
         return jsonify({'items': items, 'payments': [], 'terms': [], 'deposit': 0,
