@@ -34,7 +34,7 @@ def generate():
         xlsx_bytes = xlsx_buf.getvalue()
         pid = uuid.uuid4().hex[:8]
         fname = _make_filename(data, doc_title)
-        html = _build_download_page(pid, doc_title, data)
+        html = _build_download_page(pid, doc_title, data, fname)
         _preview_cache[pid] = {'html': html, 'xlsx': xlsx_bytes, '_filename': fname + '.xlsx'}
         return jsonify({'preview_id': pid, 'status': 'ok'})
     except Exception as e:
@@ -69,7 +69,7 @@ def _make_filename(data, title):
     return '_'.join(parts) + '_' + title
 
 
-def _build_download_page(pid, title, data):
+def _build_download_page(pid, title, data, fname):
     addr = data.get('address','') or data.get('project_name','output')
     date_str = (data.get('date','') or '').replace('-','')
     return f"""<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>{title}</title>
@@ -86,7 +86,7 @@ p{{color:#666;margin-bottom:24px;font-size:14px}}
 </style></head><body>
 <div class="card">
 <h1>{title}已生成</h1>
-<p>{addr} - {date_str}</p>
+<p>{fname}.xlsx</p>
 <a class="btn btn-excel" href="/download/{pid}/excel">下載 Excel</a>
 <a class="btn btn-back" href="/">返回主頁</a>
 <div class="ver">{_VERSION}</div>
