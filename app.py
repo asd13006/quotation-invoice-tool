@@ -77,19 +77,42 @@ def upload():
         result = {'items': [], 'payments': [], 'terms': [], 'deposit': 0,
                   '_filename': file.filename, 'show_payment': False, 'show_terms': False}
 
-        # Parse header
+        # Parse header — scan for label patterns
         header_map = {'工程名稱': 'project_name', '工程地址': 'address',
                       '客戶姓名': 'owner_name', '業主姓名': 'owner_name',
                       '裝修公司': 'company_name', '報價單號': 'quotation_no',
                       '報價日期': 'date', '有效期': 'validity', '版本': 'version'}
-        for r in range(1, 11):
-            for c in range(1, 8):
-                label = str(ws.cell(row=r, column=c).value or '')
+        for r in range(1, 21):
+            for c in range(1, 10):
+                label = str(ws.cell(row=r, column=c).value or '').strip()
+                if not label: continue
                 for kw, key in header_map.items():
-                    if kw in label and '：' in label:
-                        val = str(ws.cell(row=r, column=c+1).value or '')
-                        if val and val != 'None' and val != '-':
-                            result[key] = val
+                    if kw not in label: continue
+                    # Value can be in next cell (c+1) or merged next cells
+                    val = str(ws.cell(row=r, column=c+1).value or '')
+                    # If empty, try c+2 (label in A, value starts at C with merged B)
+                    if val in ('None', '', '-'):
+                        val = str(ws.cell(row=r, column=c+2).value or '')
+                    # Also try same row, column E/F pattern (old format: A=addr label, B=addr value; E=date label, F=date value)
+                    if val in ('None', '', '-'):
+                        for cc in range(c+1, 10):
+                            v = str(ws.cell(row=r, column=cc).value or '')
+                            if v not in ('None', '', '-'):
+                                val = v; break
+                    if val and val not in ('None', '', '-'):
+                        result[key] = val
+                        break
+        # Also try: "地址:" or "地址：" pattern at start of cell (combined label+value)
+        for r in range(1, 21):
+            for c in range(1, 10):
+                label = str(ws.cell(row=r, column=c).value or '').strip()
+                if not label: continue
+                for kw, key in [('工程地址', 'address'), ('報價日期', 'date')]:
+                    if kw in label and ('：' in label or ':' in label):
+                        sep = '：' if '：' in label else ':'
+                        parts = label.split(sep, 1)
+                        if len(parts) > 1 and parts[1].strip():
+                            result[key] = parts[1].strip()
 
         # Universal item parser — auto-detect column layout
         items = _parse_items_universal(ws)
