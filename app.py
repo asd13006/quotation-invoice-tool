@@ -1,9 +1,9 @@
 """
 裝修報價單/發票助手 — Flask 後端（Vercel 相容）
 """
-import io, os, uuid
+import io, os, re, uuid
 from flask import Flask, render_template, request, send_file, jsonify
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
 
 app = Flask(__name__)
@@ -56,6 +56,36 @@ def download_excel(pid):
     return send_file(io.BytesIO(entry['xlsx']),
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                      as_attachment=True, download_name=fname)
+
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    file = request.files.get('file')
+    if not file: return jsonify({'error': '請選擇 .xlsx 檔案'}), 400
+    try:
+        wb = load_workbook(io.BytesIO(file.read()), data_only=True)
+        ws = wb.active
+        items = []
+        # Scan for item rows: seq number + description + price
+        for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+            if not row or row[0] is None: continue
+            r = row[0].row
+            a = str(ws.cell(row=r, column=1).value or '').strip()
+            b = str(ws.cell(row=r, column=2).value or '').strip()
+            # Look for sequence number pattern
+            if re.match(r'^\d+[\.\)]?\s*$', a) and len(b) > 2:
+                price = 0
+                for c in range(3, 8):
+                    v = ws.cell(row=r, column=c).value
+                    if isinstance(v, (int, float)) and float(v) > 0:
+                        price = int(v); break
+                items.append({'category': '雜項', 'description': b, 'quantity': 1,
+                              'unit': '項', 'unit_price': price, 'remark': '',
+                              'is_additional': False})
+        return jsonify({'items': items, 'payments': [], 'terms': [], 'deposit': 0,
+                        '_filename': file.filename, 'show_payment': False, 'show_terms': False})
+    except Exception as e:
+        return jsonify({'error': f'解析失敗：{str(e)}'}), 500
 
 
 def _make_filename(data, title):
