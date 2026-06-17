@@ -9,3 +9,4 @@ __pycache__/
 *.files/
 .env
 MiniPdf_src/
+service-account.json

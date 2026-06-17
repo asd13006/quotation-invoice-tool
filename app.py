@@ -5,6 +5,7 @@ import io, os, re, uuid
 from flask import Flask, render_template, request, send_file, jsonify
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
+from drive_sync import list_projects, get_project_data
 
 app = Flask(__name__)
 _preview_cache = {}
@@ -145,6 +146,27 @@ def upload():
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': f'解析失敗：{str(e)}'}), 500
+
+
+@app.route('/projects')
+def projects_page():
+    """工程單管理列表頁"""
+    try:
+        projects = list_projects()
+    except Exception as e:
+        return f'<h1>無法連接 Google Drive</h1><p>{e}</p><a href="/">返回</a>', 500
+    return render_template('projects.html', projects=projects, version=_VERSION)
+
+
+@app.route('/api/projects/<file_id>')
+def api_load_project(file_id):
+    """載入指定工程單 data（供前端 AJAX call）"""
+    try:
+        data = get_project_data(file_id)
+        data['_filename'] = file_id
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 def _make_filename(data, title):

@@ -108,7 +108,10 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
 <h1>裝修報價單/發票助手 <span style="font-size:14px;color:#888;">{{ version }}</span></h1>
 
 <!-- Upload -->
-<div class="card" style="text-align:center; padding:14px;">
+<div class="card" style="text-align:center; padding:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+    <a href="/projects" class="btn" style="background:#002F5597; color:#fff; text-decoration:none; cursor:pointer">
+        工程單管理
+    </a>
     <input type="file" id="uploadFile" accept=".xlsx" style="display:none" onchange="uploadExcel()">
     <label for="uploadFile" class="btn" style="background:#E4EAF3; color:#1a1a1a; cursor:pointer">
         匯入 Excel（反向填表）
@@ -217,6 +220,29 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
 <script>
 // ── Init ──
 document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+// Auto-fill from project list
+(function() {
+    const data = sessionStorage.getItem('loadProject');
+    if (data) {
+        sessionStorage.removeItem('loadProject');
+        try {
+            const d = JSON.parse(data);
+            const fields = ['project_name','owner_name','address','company_name','quotation_no','date','validity','version','deposit'];
+            fields.forEach(f => { const el = document.getElementById(f); if (el && d[f] !== undefined) el.value = d[f] || ''; });
+            const basicLines = [], addLines = [];
+            (d.items||[]).forEach(it => {
+                const line = `${it.description} ${it.unit_price}`;
+                if (it.is_additional) addLines.push(line); else basicLines.push(line);
+            });
+            document.getElementById('basicText').value = basicLines.join('\n');
+            document.getElementById('additionalText').value = addLines.join('\n');
+            parseItems();
+            if (d.payments) { document.getElementById('paymentList').innerHTML = ''; d.payments.forEach(p => addPayment(p)); document.getElementById('showPayment').checked = d.payments.length > 0; }
+            if (d.terms) { document.getElementById('termList').innerHTML = ''; d.terms.forEach(t => addTerm(t)); document.getElementById('showTerms').checked = d.terms.length > 0; updateTermNums(); }
+        } catch(e) {}
+    }
+})();
 
 // ── Payment defaults ──
 const DEFAULT_PAYMENTS = [
