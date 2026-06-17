@@ -1,7 +1,7 @@
 """
 Google Drive 同步 — 讀取工程單 xlsx 檔案
 """
-import io
+import io, os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from openpyxl import load_workbook
@@ -14,8 +14,16 @@ _drive = None
 def _get_drive():
     global _drive, _creds
     if _drive is None:
-        _creds = service_account.Credentials.from_service_account_file(
-            'service-account.json', scopes=SCOPES)
+        import json as _json
+        # Vercel: read from env var; local: read from file
+        sa_json = os.environ.get('SERVICE_ACCOUNT_JSON', '')
+        if sa_json:
+            info = _json.loads(sa_json)
+            _creds = service_account.Credentials.from_service_account_info(
+                info, scopes=SCOPES)
+        else:
+            _creds = service_account.Credentials.from_service_account_file(
+                'service-account.json', scopes=SCOPES)
         _drive = build('drive', 'v3', credentials=_creds)
     return _drive
 
