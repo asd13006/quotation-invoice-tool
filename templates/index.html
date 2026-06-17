@@ -7,9 +7,26 @@
 <title>裝修報價單/發票助手 {{ version }}</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif; background: #f0f2f5; color: #333; padding: 20px; }
-.container { max-width: 1140px; margin: 0 auto; }
-h1 { text-align: center; color: #002F5597; margin-bottom: 24px; font-size: 24px; }
+body { font-family: 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif; background: #f0f2f5; color: #333; display: flex; min-height: 100vh; }
+/* Sidebar */
+.sidebar { width: 220px; background: #002F5597; color: #fff; padding: 20px 0; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; display: flex; flex-direction: column; }
+.sidebar h2 { font-size: 16px; padding: 0 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 8px; }
+.sidebar a { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.8); text-decoration: none; padding: 10px 16px; font-size: 14px; transition: background 0.15s; }
+.sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.12); color: #fff; }
+.sidebar .ver { margin-top: auto; padding: 16px; font-size: 11px; color: rgba(255,255,255,0.4); }
+/* Main */
+.main { margin-left: 220px; flex: 1; padding: 20px; min-width: 0; }
+.container { max-width: 1100px; margin: 0 auto; }
+h1 { color: #002F5597; margin-bottom: 24px; font-size: 22px; }
+/* Mobile */
+.menu-toggle { display: none; position: fixed; top: 10px; left: 10px; z-index: 101; background: #002F5597; color: #fff; border: none; border-radius: 6px; padding: 8px 12px; font-size: 18px; cursor: pointer; }
+@media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); transition: transform 0.2s; }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .menu-toggle { display: block; }
+    body { padding-top: 50px; }
+}
 .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 20px; }
 .card h2 { font-size: 17px; color: #002F5597; border-bottom: 2px solid #D9E1F2; padding-bottom: 10px; margin-bottom: 16px; }
 
@@ -104,14 +121,20 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
 </style>
 </head>
 <body>
+<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+<div class="sidebar">
+<h2>工程單助手</h2>
+<a href="/" class="active">📝 新增報價單</a>
+<a href="/projects">📂 工程單列表</a>
+<a href="#" onclick="document.getElementById('uploadFile').click()">📥 匯入 Excel</a>
+<div class="ver">{{ version }}</div>
+</div>
+<div class="main">
 <div class="container">
-<h1>裝修報價單/發票助手 <span style="font-size:14px;color:#888;">{{ version }}</span></h1>
+<h1>新增報價單</h1>
 
 <!-- Upload -->
 <div class="card" style="text-align:center; padding:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
-    <a href="/projects" class="btn" style="background:#002F5597; color:#fff; text-decoration:none; cursor:pointer">
-        工程單管理
-    </a>
     <input type="file" id="uploadFile" accept=".xlsx" style="display:none" onchange="uploadExcel()">
     <label for="uploadFile" class="btn" style="background:#E4EAF3; color:#1a1a1a; cursor:pointer">
         匯入 Excel（反向填表）
@@ -524,5 +547,6 @@ async function uploadExcel() {
     }
 }
 </script>
+</div></div>
 </body>
 </html>
