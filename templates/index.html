@@ -402,7 +402,7 @@ function collectData() {
         });
     });
     return {
-        project_name: document.getElementById('project_name').value.trim()||'未命名',
+        project_name: document.getElementById('project_name').value.trim()||'-',
         owner_name: document.getElementById('owner_name').value.trim()||'',
         address: document.getElementById('address').value.trim()||'',
         company_name: document.getElementById('company_name').value.trim()||'',
@@ -436,7 +436,7 @@ async function generate(type) {
             if (data.owner_name) parts.push(data.owner_name);
             const ds = (data.date||'').replace(/-/g,'');
             if (ds) parts.push(ds);
-            if (!parts.length) parts.push(ds||'output');
+            if (!parts.length) parts.push(ds||'-');
             const fname = parts.join('_') + '_' + tname + '.xlsx';
             document.getElementById('dlgTitle').textContent = tname + '已生成';
             document.getElementById('dlgFile').textContent = fname;

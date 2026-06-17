@@ -65,7 +65,7 @@ def _make_filename(data, title):
         if v: parts.append(v)
     date = (data.get('date', '') or '').replace('-', '')
     if date.strip(): parts.append(date.strip())
-    if not parts: parts.append(date or 'output')
+    if not parts: parts.append(date or '-')
     return '_'.join(parts) + '_' + title
 
 
