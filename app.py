@@ -295,9 +295,18 @@ def projects_page():
         return '<script>location.href="/login"</script>'
     try:
         projects = list_projects()
+        # Group by year-month
+        grouped = []
+        seen = set()
+        for p in projects:
+            ym = p['date'][:7] if p['date'] else 'unknown'
+            if ym not in seen:
+                seen.add(ym)
+                grouped.append({'type': 'header', 'label': ym, 'count': sum(1 for pp in projects if (pp.get('date','') or '')[:7] == ym)})
+            grouped.append({'type': 'item', 'data': p, 'ym': ym})
     except Exception as e:
         return f'<h1>無法連接 Google Drive</h1><p>{e}</p><a href="/">返回</a>', 500
-    return render_template('projects.html', projects=projects, version=_VERSION)
+    return render_template('projects.html', grouped=grouped, version=_VERSION)
 
 
 @app.route('/api/projects/<file_id>')

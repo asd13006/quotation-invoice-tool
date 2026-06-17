@@ -26,16 +26,23 @@
 
 <input class="search-input" type="text" placeholder="搜尋工程單…" oninput="filterList()" id="searchInput">
 
-{% if projects %}
+{% if grouped %}
 <div class="project-list">
-{% for p in projects %}
-<div class="project-item" data-search="{{ p.name }}">
-<span style="font-size:20px">📄</span>
-<div style="flex:1;min-width:0;cursor:pointer" onclick="loadProject('{{ p.id }}')">
-<div class="project-item-name">{{ p.name }}</div>
-<div style="font-size:11px;color:var(--text-secondary)">{{ p.size_kb }}KB · {{ p.date }}</div>
+{% for g in grouped %}
+{% if g.type == 'header' %}
+<div class="month-header" data-search="{{ g.label }}">
+<span class="month-label">{{ g.label[:4] }}年{{ g.label[5:7]|int }}月</span>
+<span class="month-count">{{ g.count }} 張單</span>
+</div>
+{% else %}
+<div class="project-item" data-search="{{ g.data.name }} {{ g.ym }}" onclick="loadProject('{{ g.data.id }}')">
+<span style="font-size:18px">📄</span>
+<div style="flex:1;min-width:0">
+<div class="project-item-name">{{ g.data.name }}</div>
+<div style="font-size:11px;color:var(--text-secondary)">{{ g.data.size_kb }}KB · {{ g.data.date }}</div>
 </div>
 </div>
+{% endif %}
 {% endfor %}
 </div>
 {% else %}
