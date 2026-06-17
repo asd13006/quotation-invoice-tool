@@ -175,7 +175,7 @@ def _check_auth():
 def _send_code(email):
     """Send 6-digit code via email"""
     code = ''.join(random.choices('0123456789', k=6))
-    _pending_codes[email] = {'code': code, 'expires': time.time() + 300}  # 5 min TTL
+    _pending_codes[email] = {'code': code, 'expires': time.time() + 300, 'tries': 0, 'max_tries': 5}
 
     msg = MIMEText(f'你的登入驗證碼：\n\n{code}\n\n5 分鐘內有效。', 'plain', 'utf-8')
     msg['Subject'] = '工程單助手 — 登入驗證碼'
@@ -210,12 +210,19 @@ def login_page():
         # Step 2: code submitted → verify
         if email == allowed and code:
             pending = _pending_codes.get(email)
-            if pending and pending['code'] == code and time.time() < pending['expires']:
+            if not pending or time.time() >= pending['expires']:
+                return _login_page_html(email=email, sent=True, error='驗證碼已過期，請重新發送')
+            pending['tries'] += 1
+            if pending['code'] == code:
                 del _pending_codes[email]
                 resp = app.make_response('<script>location.href="/"</script>')
                 resp.set_cookie('auth', allowed, max_age=60*60*24*30)
                 return resp
-            return _login_page_html(email=email, error='驗證碼錯誤或已過期')
+            remaining = pending['max_tries'] - pending['tries']
+            if remaining <= 0:
+                del _pending_codes[email]
+                return _login_page_html(error='驗證碼錯誤次數過多，請重新發送')
+            return _login_page_html(email=email, sent=True, error=f'驗證碼錯誤，仲有 {remaining} 次機會')
 
     return _login_page_html()
 
