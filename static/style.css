@@ -16,6 +16,19 @@
   --radius: 14px; --radius-sm: 8px; --blur: 16px;
 }
 
+[data-theme="light"] .sidebar {
+  --sidebar-bg: rgba(255,255,255,0.85); --sidebar-text: #64748b; --sidebar-active: #3b82f6;
+  color: #1e293b; border-right: 1px solid rgba(0,0,0,0.06);
+}
+[data-theme="light"] .sidebar a:hover { background: rgba(0,0,0,0.04); color: #1e293b; }
+[data-theme="light"] .sidebar a.active { color: #3b82f6; background: rgba(59,130,246,0.08); }
+[data-theme="light"] .sidebar-logo { border-bottom-color: rgba(0,0,0,0.06); }
+[data-theme="light"] .sidebar-logo span { color: #94a3b8; }
+[data-theme="light"] .theme-toggle { border-color: rgba(0,0,0,0.1); color: #64748b; }
+[data-theme="light"] .theme-toggle:hover { background: rgba(0,0,0,0.04); }
+[data-theme="light"] thead th { background: rgba(241,245,249,0.9); color: #1e293b; }
+[data-theme="light"] .menu-toggle { background: rgba(255,255,255,0.85); color: #1e293b; }
+
 [data-theme="dark"] {
   --bg: linear-gradient(135deg, #0f172a 0%, #1a1f35 50%, #0d1525 100%);
   --glass: rgba(30,41,59,0.6); --glass-hover: rgba(30,41,59,0.8);
