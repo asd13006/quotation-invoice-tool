@@ -21,6 +21,8 @@ with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:
 
 @app.route('/')
 def index():
+    if not _check_password():
+        return '<script>location.href="/login"</script>'
     return render_template('index.html', version=_VERSION)
 
 
@@ -153,9 +155,38 @@ def upload():
         return jsonify({'error': f'解析失敗：{str(e)}'}), 500
 
 
+def _check_password():
+    """簡單密碼保護 — 檢查 session cookie"""
+    pw = os.environ.get('SITE_PASSWORD', '')
+    if not pw: return True  # 冇 set password = 開放
+    cookie = request.cookies.get('auth')
+    return cookie == pw
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    if request.method == 'POST':
+        if request.form.get('password', '') == os.environ.get('SITE_PASSWORD', ''):
+            resp = app.make_response('<script>location.href="/projects"</script>')
+            resp.set_cookie('auth', os.environ.get('SITE_PASSWORD', ''), max_age=60*60*24*30)
+            return resp
+        return '<h2 style="text-align:center;margin-top:40px">密碼錯誤 <a href="/login">重試</a></h2>'
+    return '''<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>登入 — 工程單助手</title>
+<style>body{font-family:'Microsoft JhengHei',sans-serif;background:linear-gradient(135deg,#e0e7f0,#d5ddef);display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:rgba(255,255,255,0.55);backdrop-filter:blur(16px);border-radius:14px;padding:36px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.06);border:1px solid rgba(255,255,255,.5)}
+h1{font-size:20px;margin-bottom:16px;color:#1e293b}input{padding:10px 14px;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-size:15px;width:100%;margin-bottom:10px}
+button{padding:10px 28px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+@media(prefers-color-scheme:dark){body{background:linear-gradient(135deg,#0f172a,#1a1f35)}h1{color:#e2e8f0}.card{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}}</style>
+</head><body><div class="card"><h1>工程單助手</h1>
+<form method="POST"><input type="password" name="password" placeholder="請輸入密碼…" autofocus><button type="submit">登入</button></form>
+</div></body></html>'''
+
+
 @app.route('/projects')
 def projects_page():
-    """工程單管理列表頁"""
+    if not _check_password():
+        return '<script>location.href="/login"</script>'
     try:
         projects = list_projects()
     except Exception as e:
