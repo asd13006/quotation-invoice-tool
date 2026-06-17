@@ -102,6 +102,46 @@ def upload():
                               'unit': '項', 'unit_price': price, 'remark': '',
                               'is_additional': False})
         result['items'] = items
+
+        # Parse payments & terms
+        for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+            if not row or row[0] is None: continue
+            a = str(ws.cell(row=row[0].row, column=1).value or '')
+            r = row[0].row
+
+            # Payment section: look for header "付款期數" then read following rows
+            if '付款期數' in a:
+                pr = r + 1
+                while pr <= ws.max_row:
+                    pa = str(ws.cell(row=pr, column=1).value or '')
+                    pb = str(ws.cell(row=pr, column=2).value or '')
+                    pd = str(ws.cell(row=pr, column=4).value or '')
+                    if pa and pa != 'None' and '備註' not in pa and '條款' not in pa and '付款期數' not in pa:
+                        pct_m = re.search(r'(\d+)%', pb)
+                        pct = int(pct_m.group(1)) if pct_m else 25
+                        result['payments'].append({'label': pa, 'pct': pct,
+                            'label_pct': pb if pb not in ('None','') else f'總金額之 {pct}%',
+                            'desc': pd if pd not in ('None','') else ''})
+                        pr += 1
+                    else:
+                        break
+                result['show_payment'] = len(result['payments']) > 0
+
+            # Terms section
+            if '備註及條款' in a:
+                tr = r + 1
+                while tr <= ws.max_row:
+                    ta = str(ws.cell(row=tr, column=1).value or '')
+                    if ta and ta != 'None' and '付款' not in ta:
+                        ta = re.sub(r'^\d+\.\s*', '', ta).strip()
+                        if len(ta) > 3:
+                            result['terms'].append(ta)
+                        tr += 1
+                    else:
+                        tr += 1
+                        if tr - r > 20: break
+                result['show_terms'] = len(result['terms']) > 0
+
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': f'解析失敗：{str(e)}'}), 500
