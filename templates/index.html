@@ -414,7 +414,7 @@ async function generate(type) {
         const result = await resp.json();
         if (result.preview_id) {
             window.open('/preview/' + result.preview_id, '_blank');
-            showMsg('生成成功！預覽頁已開啟。喺預覽頁可以下載 Excel / PDF / JPG。','success');
+            showMsg('生成成功！預覽頁已開啟。','success');
         }
     } catch(err) { showMsg('生成失敗：'+err.message,'error'); }
     finally { btns.forEach(b=>b.disabled=false); }

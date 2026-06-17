@@ -1,16 +1,16 @@
 """
 裝修報價單/發票助手 — Flask 後端（Vercel 相容）
 """
-import io, re, os, uuid, base64
+import io, os, uuid
 from flask import Flask, render_template, request, send_file, jsonify
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from generator import generate_quotation
-from styles import SECTIONS
 
 app = Flask(__name__)
 _preview_cache = {}
 
-_VERSION = open(os.path.join(os.path.dirname(__file__), 'VERSION')).read().strip()
+with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:
+    _VERSION = f.read().strip()
 
 
 @app.route('/')
@@ -85,7 +85,7 @@ p{{color:#666;margin-bottom:24px;font-size:14px}}
 .ver{{color:#aaa;font-size:12px;margin-top:16px}}
 </style></head><body>
 <div class="card">
-<h1>{doc_title}已生成</h1>
+<h1>{title}已生成</h1>
 <p>{addr} - {date_str}</p>
 <a class="btn btn-excel" href="/download/{pid}/excel">下載 Excel</a>
 <a class="btn btn-back" href="/">返回主頁</a>
