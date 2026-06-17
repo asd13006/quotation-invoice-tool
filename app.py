@@ -1,7 +1,8 @@
 """
 裝修報價單/發票助手 — Flask 後端（Vercel 相容）
 """
-import io, os, re, uuid
+import io, os, re, uuid, random, smtplib, time
+from email.mime.text import MIMEText
 from flask import Flask, render_template, request, send_file, jsonify
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
@@ -21,7 +22,7 @@ with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:
 
 @app.route('/')
 def index():
-    if not _check_password():
+    if not _check_auth():
         return '<script>location.href="/login"</script>'
     return render_template('index.html', version=_VERSION)
 
@@ -155,37 +156,95 @@ def upload():
         return jsonify({'error': f'解析失敗：{str(e)}'}), 500
 
 
-def _check_password():
-    """簡單密碼保護 — 檢查 session cookie"""
-    pw = os.environ.get('SITE_PASSWORD', '')
-    if not pw: return True  # 冇 set password = 開放
-    cookie = request.cookies.get('auth')
-    return cookie == pw
+# ── Email 2FA login ──
+_pending_codes = {}  # email -> {'code': '123456', 'expires': timestamp}
+
+SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
+SMTP_USER = os.environ.get('SMTP_USER', '')
+SMTP_PASS = os.environ.get('SMTP_PASS', '')  # Gmail App Password
+
+
+def _check_auth():
+    """檢查 session cookie"""
+    allowed = os.environ.get('LOGIN_EMAIL', '')
+    if not allowed: return True  # 冇 set = 開放
+    return request.cookies.get('auth') == allowed
+
+
+def _send_code(email):
+    """Send 6-digit code via email"""
+    code = ''.join(random.choices('0123456789', k=6))
+    _pending_codes[email] = {'code': code, 'expires': time.time() + 300}  # 5 min TTL
+
+    msg = MIMEText(f'你的登入驗證碼：\n\n{code}\n\n5 分鐘內有效。', 'plain', 'utf-8')
+    msg['Subject'] = '工程單助手 — 登入驗證碼'
+    msg['From'] = SMTP_USER
+    msg['To'] = email
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+        s.starttls()
+        s.login(SMTP_USER, SMTP_PASS)
+        s.send_message(msg)
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
+    allowed = os.environ.get('LOGIN_EMAIL', '')
+    if not allowed: return '<script>location.href="/"</script>'
+
     if request.method == 'POST':
-        if request.form.get('password', '') == os.environ.get('SITE_PASSWORD', ''):
-            resp = app.make_response('<script>location.href="/projects"</script>')
-            resp.set_cookie('auth', os.environ.get('SITE_PASSWORD', ''), max_age=60*60*24*30)
-            return resp
-        return '<h2 style="text-align:center;margin-top:40px">密碼錯誤 <a href="/login">重試</a></h2>'
-    return '''<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>登入 — 工程單助手</title>
-<style>body{font-family:'Microsoft JhengHei',sans-serif;background:linear-gradient(135deg,#e0e7f0,#d5ddef);display:flex;justify-content:center;align-items:center;min-height:100vh}
-.card{background:rgba(255,255,255,0.55);backdrop-filter:blur(16px);border-radius:14px;padding:36px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.06);border:1px solid rgba(255,255,255,.5)}
-h1{font-size:20px;margin-bottom:16px;color:#1e293b}input{padding:10px 14px;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-size:15px;width:100%;margin-bottom:10px}
-button{padding:10px 28px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
-@media(prefers-color-scheme:dark){body{background:linear-gradient(135deg,#0f172a,#1a1f35)}h1{color:#e2e8f0}.card{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}}</style>
-</head><body><div class="card"><h1>工程單助手</h1>
-<form method="POST"><input type="password" name="password" placeholder="請輸入密碼…" autofocus><button type="submit">登入</button></form>
-</div></body></html>'''
+        email = request.form.get('email', '').strip()
+        code = request.form.get('code', '').strip()
+
+        # Step 1: email submitted → send code
+        if email == allowed and not code:
+            try:
+                _send_code(email)
+                return _login_page_html(email=email, sent=True)
+            except Exception as e:
+                return _login_page_html(error=f'發送失敗：{e}')
+
+        # Step 2: code submitted → verify
+        if email == allowed and code:
+            pending = _pending_codes.get(email)
+            if pending and pending['code'] == code and time.time() < pending['expires']:
+                del _pending_codes[email]
+                resp = app.make_response('<script>location.href="/"</script>')
+                resp.set_cookie('auth', allowed, max_age=60*60*24*30)
+                return resp
+            return _login_page_html(email=email, error='驗證碼錯誤或已過期')
+
+    return _login_page_html()
+
+
+def _login_page_html(email='', sent=False, error=''):
+    glass_css = '''body{font-family:'Microsoft JhengHei',sans-serif;background:linear-gradient(135deg,#e0e7f0,#d5ddef);display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.card{background:rgba(255,255,255,0.55);backdrop-filter:blur(20px);border-radius:18px;padding:40px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.08);border:1px solid rgba(255,255,255,.5);max-width:380px;width:90%}
+h1{font-size:22px;margin-bottom:4px;color:#1e293b}h1 span{font-size:12px;color:#94a3b8;display:block;margin-top:4px}
+p{color:#64748b;font-size:14px;margin-bottom:20px}
+input{padding:12px 14px;border:1px solid rgba(0,0,0,.1);border-radius:10px;font-size:15px;width:100%;margin-bottom:10px;text-align:center;letter-spacing:4px;font-family:monospace;background:rgba(255,255,255,.6);backdrop-filter:blur(4px)}
+button{padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 4px 14px rgba(59,130,246,.25)}
+button:hover{background:#2563eb}.error{color:#ef4444;font-size:13px;margin-bottom:10px}.success{color:#22c55e;font-size:13px;margin-bottom:10px}
+@media(prefers-color-scheme:dark){body{background:linear-gradient(135deg,#0f172a,#1a1f35)}h1{color:#e2e8f0}.card{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}p{color:#94a3b8}input{background:rgba(30,41,59,.7);border-color:rgba(255,255,255,.1);color:#e2e8f0}}'''
+    error_html = f'<div class="error">{error}</div>' if error else ''
+    success_html = '<div class="success">驗證碼已發送到你的郵箱</div>' if sent else ''
+
+    if sent:
+        body = f'''<h1>驗證碼已發送<span>請檢查郵箱</span></h1>{success_html}{error_html}
+<form method="POST"><input type="hidden" name="email" value="{email}">
+<input type="text" name="code" placeholder="輸入 6 位數字驗證碼" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus>
+<button type="submit">驗證登入</button></form>'''
+    else:
+        body = f'''<h1>工程單助手<span>Email 驗證登入</span></h1><p>輸入註冊郵箱接收一次性驗證碼</p>{error_html}
+<form method="POST"><input type="email" name="email" placeholder="your@email.com" autofocus><button type="submit">發送驗證碼</button></form>'''
+
+    return f'<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>登入 — 工程單助手</title><style>{glass_css}</style></head><body><div class="card">{body}</div></body></html>'
 
 
 @app.route('/projects')
 def projects_page():
-    if not _check_password():
+    if not _check_auth():
         return '<script>location.href="/login"</script>'
     try:
         projects = list_projects()
