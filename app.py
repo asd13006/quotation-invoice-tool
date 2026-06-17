@@ -8,6 +8,11 @@ from generator import generate_quotation
 from drive_sync import list_projects, get_project_data
 
 app = Flask(__name__)
+
+# Serve static files
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
 _preview_cache = {}
 
 with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:

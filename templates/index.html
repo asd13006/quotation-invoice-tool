@@ -4,241 +4,116 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
-<title>裝修報價單/發票助手 {{ version }}</title>
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif; background: #f0f2f5; color: #333; display: flex; min-height: 100vh; }
-/* Sidebar */
-.sidebar { width: 220px; background: #002F5597; color: #fff; padding: 20px 0; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; display: flex; flex-direction: column; }
-.sidebar h2 { font-size: 16px; padding: 0 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 8px; }
-.sidebar a { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.8); text-decoration: none; padding: 10px 16px; font-size: 14px; transition: background 0.15s; }
-.sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.12); color: #fff; }
-.sidebar .ver { margin-top: auto; padding: 16px; font-size: 11px; color: rgba(255,255,255,0.4); }
-/* Main */
-.main { margin-left: 220px; flex: 1; padding: 20px; min-width: 0; }
-.container { max-width: 1100px; margin: 0 auto; }
-h1 { color: #002F5597; margin-bottom: 24px; font-size: 22px; }
-/* Mobile */
-.menu-toggle { display: none; position: fixed; top: 10px; left: 10px; z-index: 101; background: #002F5597; color: #fff; border: none; border-radius: 6px; padding: 8px 12px; font-size: 18px; cursor: pointer; }
-@media (max-width: 768px) {
-    .sidebar { transform: translateX(-100%); transition: transform 0.2s; }
-    .sidebar.open { transform: translateX(0); }
-    .main { margin-left: 0; }
-    .menu-toggle { display: block; }
-    body { padding-top: 50px; }
-}
-.card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 20px; }
-.card h2 { font-size: 17px; color: #002F5597; border-bottom: 2px solid #D9E1F2; padding-bottom: 10px; margin-bottom: 16px; }
-
-.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.form-group { display: flex; flex-direction: column; gap: 4px; }
-.form-group label { font-size: 13px; font-weight: bold; color: #555; }
-.form-group input::placeholder, .form-group textarea::placeholder, textarea::placeholder { color: #bbb; font-size: 14px; }
-.form-group input, .form-group select, .form-group textarea {
-    padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px;
-    font-size: 16px; font-family: inherit;
-}
-.form-group input:focus-visible, .form-group select:focus-visible, .form-group textarea:focus-visible {
-    outline: 2px solid #002F5597; outline-offset: 1px;
-}
-
-/* Textareas */
-.textarea-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
-.textarea-group { display: flex; flex-direction: column; gap: 6px; }
-.textarea-group label { font-size: 14px; font-weight: bold; }
-.textarea-group label .hint { font-weight: normal; font-size: 12px; color: #bbb; }
-.textarea-group textarea {
-    width: 100%; height: 200px; padding: 10px;
-    border: 2px solid #ddd; border-radius: 8px;
-    font-size: 16px; font-family: 'Microsoft JhengHei', '微軟正黑體', monospace;
-    line-height: 1.7; resize: vertical;
-}
-.textarea-group textarea:focus-visible { border-color: #002F5597; outline: none; }
-
-.btn { padding: 8px 18px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-family: inherit; transition: transform 0.15s, background 0.15s, opacity 0.15s; }
-.btn:active { transform: scale(0.97); }
-.btn-parse { display: block; margin: 0 auto 10px; background: #002F5597; color: #fff; font-size: 15px; font-weight: bold; padding: 10px 36px; }
-.btn-parse:hover { background: #001f3f; }
-.btn-add { background: #D9E1F2; color: #002F5597; font-weight: bold; margin-top: 10px; }
-.btn-add:hover { background: #C0CFE6; }
-.btn-del { background: #fee; color: #c00; padding: 5px 10px; font-size: 12px; border-radius: 4px; }
-.btn-del:hover { background: #fcc; }
-
-.parse-count { text-align: center; font-size: 13px; color: #888; margin-bottom: 14px; }
-
-/* Table */
-.table-wrapper { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-thead th { background: #002F5597; color: #fff; padding: 8px 4px; text-align: center; font-weight: bold; white-space: nowrap; }
-tbody td { padding: 5px; text-align: center; vertical-align: middle; }
-tbody tr:nth-child(odd) { background: #fafafa; }
-tbody tr:hover { background: #eef2fa; }
-tbody input, tbody select { width: 100%; padding: 6px 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; text-align: inherit; }
-tbody input:focus-visible, tbody select:focus-visible { outline: 2px solid #002F5597; outline-offset: 1px; }
-.col-seq { width: 48px; }
-.col-stage { width: 72px; }
-.col-cat { width: 100px; }
-.col-desc { min-width: 240px; }
-.col-qty { width: 55px; }
-.col-unit { width: 55px; }
-.col-price { width: 85px; }
-.col-amount { width: 95px; }
-.col-remark { width: 150px; }
-.col-action { width: 40px; }
-tbody td.col-amount { font-weight: bold; color: #002F5597; font-size: 13px; }
-
-.summary-row { display: flex; justify-content: flex-end; align-items: center; gap: 20px; margin-top: 14px; padding-top: 12px; border-top: 2px solid #eee; font-size: 15px; }
-.summary-label { font-weight: bold; color: #555; }
-.summary-value { font-size: 20px; font-weight: bold; color: #002F5597; }
-
-/* Buttons */
-.btn-bar { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.btn-gen { padding: 14px 36px; font-size: 17px; font-weight: bold; border-radius: 8px; cursor: pointer; border: none; background: #002F5597; color: #fff; transition: background 0.2s, opacity 0.2s; }
-.btn-gen:hover:not(:disabled) { background: #001f3f; }
-.btn-gen:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.msg { text-align: center; margin-top: 12px; padding: 10px; border-radius: 6px; display: none; }
-.msg.success { background: #e8f5e9; color: #2e7d32; display: block; }
-.msg.error { background: #ffebee; color: #c62828; display: block; }
-
-.empty-hint { text-align: center; padding: 30px; color: #999; }
-
-/* Modal */
-.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center; overscroll-behavior:contain }
-.modal-overlay.show { display:flex }
-.modal { background:#fff; border-radius:12px; padding:32px; text-align:center; max-width:380px; width:90%; box-shadow:0 8px 30px rgba(0,0,0,0.2) }
-.modal h3 { color:#002F5597; margin-bottom:8px; font-size:18px }
-.modal p { color:#666; font-size:13px; margin-bottom:20px; word-break:break-all }
-.modal .btn { margin-bottom:8px }
-
-details { margin-top: 12px; }
-details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #002F5597; padding: 8px 0; }
-.pay-row, .term-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-.pay-row input, .term-row input { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; font-family: inherit; }
-.pay-row input.pct { flex: 0 0 80px; text-align: center; }
-
-@media (max-width: 640px) { .textarea-row { grid-template-columns: 1fr; } .btn-gen { padding: 12px 24px; font-size: 15px; } }
-</style>
+<link rel="stylesheet" href="/static/style.css">
+<title>新增報價單 — 工程單助手 {{ version }}</title>
 </head>
 <body>
 <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+
+<!-- Sidebar -->
 <div class="sidebar">
-<h2>工程單助手</h2>
-<a href="/" class="active">📝 新增報價單</a>
-<a href="/projects">📂 工程單列表</a>
-<a href="#" onclick="document.getElementById('uploadFile').click()">📥 匯入 Excel</a>
-<div class="ver">{{ version }}</div>
+<div class="sidebar-logo">工程單助手<span>{{ version }}</span></div>
+<a href="/" class="active"><span class="icon">📝</span>新增報價單</a>
+<a href="/projects"><span class="icon">📂</span>工程單列表</a>
+<a href="#" onclick="document.getElementById('uploadFile').click()"><span class="icon">📥</span>匯入 Excel</a>
 </div>
+
+<!-- Main -->
 <div class="main">
-<div class="container">
-<h1>新增報價單</h1>
+<h1 class="page-title">新增報價單</h1>
 
-<!-- Upload -->
-<div class="card" style="text-align:center; padding:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+<!-- Upload bar -->
+<div class="card" style="text-align:center;padding:12px 18px">
     <input type="file" id="uploadFile" accept=".xlsx" style="display:none" onchange="uploadExcel()">
-    <label for="uploadFile" class="btn" style="background:#E4EAF3; color:#1a1a1a; cursor:pointer">
-        匯入 Excel（反向填表）
-    </label>
-    <span id="uploadMsg" style="margin-left:12px; font-size:13px; color:#888;"></span>
+    <label for="uploadFile" class="btn btn-secondary btn-sm" style="cursor:pointer">📥 匯入 Excel（反向填表）</label>
+    <span id="uploadMsg" style="margin-left:10px;font-size:12px;color:var(--text-secondary)"></span>
 </div>
 
-<!-- Header 資訊 -->
+<!-- Basic Info -->
 <div class="card">
-    <h2>基本資料</h2>
-    <div class="info-grid">
-        <div class="form-group"><label>工程名稱</label><input type="text" id="project_name" placeholder="例如：香港九龍某屋苑住宅裝修工程…" autocomplete="organization"></div>
-        <div class="form-group"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="例如：陳大文 先生…" autocomplete="name"></div>
-        <div class="form-group"><label>工程地址</label><input type="text" id="address" placeholder="例如：香港九龍尖沙咀…" autocomplete="street-address"></div>
-        <div class="form-group"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="例如：卓越室內設計裝修工程有限公司 (BR: 12345678)…" autocomplete="organization"></div>
-        <div class="form-group"><label>報價單號</label><input type="text" id="quotation_no" placeholder="例如：QT-202606-001…"></div>
-        <div class="form-group"><label>報價日期</label><input type="date" id="date" autocomplete="bday"></div>
-        <div class="form-group"><label>有效期</label><input type="text" id="validity" placeholder="例如：30天內有效…"></div>
-        <div class="form-group"><label>版本</label><input type="text" id="version" placeholder="例如：Ver 1.0…"></div>
-        <div class="form-group"><label>已付訂金 (HKD)</label><input type="number" id="deposit" placeholder="0" value="0" min="0" step="1" autocomplete="off"></div>
-    </div>
+<div class="card-header">基本資料</div>
+<div class="form-grid">
+<div class="form-group"><label>工程名稱</label><input type="text" id="project_name" placeholder="例如：香港九龍某屋苑住宅裝修工程…" autocomplete="organization"></div>
+<div class="form-group"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="例如：陳大文 先生…" autocomplete="name"></div>
+<div class="form-group"><label>工程地址</label><input type="text" id="address" placeholder="例如：香港九龍尖沙咀…" autocomplete="street-address"></div>
+<div class="form-group"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="例如：卓越室內設計裝修工程有限公司 (BR: 12345678)…" autocomplete="organization"></div>
+<div class="form-group"><label>報價單號</label><input type="text" id="quotation_no" placeholder="例如：QT-202606-001…"></div>
+<div class="form-group"><label>報價日期</label><input type="date" id="date" autocomplete="bday"></div>
+<div class="form-group"><label>有效期</label><input type="text" id="validity" placeholder="例如：30天內有效…"></div>
+<div class="form-group"><label>版本</label><input type="text" id="version" placeholder="例如：Ver 1.0…"></div>
+<div class="form-group"><label>已付訂金 (HKD)</label><input type="number" id="deposit" placeholder="0" value="0" min="0" step="1" autocomplete="off"></div>
+</div>
 </div>
 
-<!-- 項目輸入 -->
+<!-- Items input -->
 <div class="card">
-    <h2>工程項目</h2>
-    <div class="textarea-row">
-        <div class="textarea-group">
-            <label>基本工程 <span class="hint">— {序號}{描述} {價錢}（價錢可省略）</span></label>
-            <textarea id="basicText" placeholder="1兩間浴室清拆磁磚 1000&#10;2全屋地板清拆 2000&#10;3拆牆身一幅 5000&#10;4油漆全屋起底批灰 700&#10;..."></textarea>
-        </div>
-        <div class="textarea-group">
-            <label>後加工程 <span class="hint">— 冇後加就留空</span></label>
-            <textarea id="additionalText" placeholder="1全屋新造水喉 21000&#10;..."></textarea>
-        </div>
-    </div>
-    <button class="btn btn-parse" onclick="parseItems()">解析項目（自動分類）</button>
-    <div class="parse-count" id="parseCount"></div>
+<div class="card-header">工程項目</div>
+<div class="textarea-row">
+<div class="textarea-group">
+<label>基本工程 <span class="hint">— {序號}{描述} {價錢}（價錢可省略）</span></label>
+<textarea id="basicText" placeholder="1兩間浴室清拆磁磚 1000&#10;2全屋地板清拆 2000&#10;3拆牆身一幅 5000&#10;4油漆全屋起底批灰 700&#10;…"></textarea>
+</div>
+<div class="textarea-group">
+<label>後加工程 <span class="hint">— 冇後加就留空</span></label>
+<textarea id="additionalText" placeholder="1全屋新造水喉 21000&#10;…"></textarea>
+</div>
+</div>
+<button class="btn btn-primary" onclick="parseItems()" style="display:block;margin:0 auto">解析項目（自動分類）</button>
+<div class="parse-count" id="parseCount"></div>
 
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th class="col-seq">序號</th><th class="col-stage">階段</th><th class="col-cat">分類</th>
-                    <th class="col-desc">項目描述</th><th class="col-qty">數量</th><th class="col-unit">單位</th>
-                    <th class="col-price">單價(HKD)</th><th class="col-amount">複價(HKD)</th>
-                    <th class="col-remark">備註</th><th class="col-action"></th>
-                </tr>
-            </thead>
-            <tbody id="itemsBody">
-                <tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <button class="btn btn-add" onclick="addEmptyItem()">＋ 手動新增項目</button>
-    <div class="summary-row">
-        <span class="summary-label">總計 (HKD)：</span>
-        <span class="summary-value" id="grandTotal">$0</span>
-    </div>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th style="width:48px">序號</th><th style="width:72px">階段</th><th style="width:100px">分類</th>
+<th style="min-width:220px">項目描述</th><th style="width:55px">數量</th><th style="width:55px">單位</th>
+<th style="width:85px">單價(HKD)</th><th style="width:95px">金額(HKD)</th>
+<th style="width:140px">備註</th><th style="width:45px"></th>
+</tr></thead>
+<tbody id="itemsBody">
+<tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>
+</tbody>
+</table>
+</div>
+<button class="btn btn-secondary btn-sm" onclick="addEmptyItem()" style="margin-top:8px">＋ 手動新增項目</button>
+<div class="summary-row">
+<span class="summary-label">總計 (HKD)：</span>
+<span class="summary-value" id="grandTotal">$0</span>
+</div>
 </div>
 
-<!-- 付款 + 條款 -->
+<!-- Payment + Terms -->
 <div class="card">
-    <h2>付款階段及備註條款</h2>
-    <details open>
-        <summary>
-            <label style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="showTerms" style="width:16px; height:16px; cursor:pointer;">
-                備註條款
-            </label>
-        </summary>
-        <div id="termList"></div>
-        <button class="btn btn-add" onclick="addTerm()" style="margin-top:8px;">＋ 新增條款</button>
-    </details>
-    <details>
-        <summary>
-            <label style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="showPayment" style="width:16px; height:16px; cursor:pointer;">
-                付款階段
-            </label>
-        </summary>
-        <div id="paymentList"></div>
-        <button class="btn btn-add" onclick="addPayment()" style="margin-top:8px;">＋ 新增付款期</button>
-    </details>
+<div class="card-header">付款階段及備註條款</div>
+<details>
+<summary><label style="cursor:pointer"><input type="checkbox" id="showTerms" style="margin-right:6px">備註條款</label></summary>
+<div id="termList"></div>
+<button class="btn btn-secondary btn-sm" onclick="addTerm()" style="margin-top:6px">＋ 新增條款</button>
+</details>
+<details style="margin-top:8px">
+<summary><label style="cursor:pointer"><input type="checkbox" id="showPayment" style="margin-right:6px">付款階段</label></summary>
+<div id="paymentList"></div>
+<button class="btn btn-secondary btn-sm" onclick="addPayment()" style="margin-top:6px">＋ 新增付款期</button>
+</details>
 </div>
 
-<!-- 生成 -->
-<div class="card">
-    <h2>生成 Excel</h2>
-    <div class="btn-bar">
-        <button class="btn-gen" onclick="generate('quotation')">生成報價單</button>
-        <button class="btn-gen" onclick="generate('invoice')">生成發票</button>
-    </div>
-    <div id="msg" class="msg"></div>
+<!-- Generate -->
+<div class="card" style="text-align:center">
+<button class="btn btn-primary btn-lg" onclick="generate('quotation')">📄 生成報價單</button>
+<button class="btn btn-primary btn-lg" onclick="generate('invoice')" style="margin-left:8px">🧾 生成發票</button>
+<div id="msg" class="msg"></div>
 </div>
+
 <!-- Modal -->
 <div class="modal-overlay" id="dlg">
 <div class="modal">
 <h3 id="dlgTitle">已生成</h3>
 <p id="dlgFile"></p>
-<a class="btn btn-gen" id="dlgLink" href="#" style="display:block;background:#1F4E78;color:#fff;text-decoration:none">下載 Excel</a>
-<button class="btn" onclick="document.getElementById('dlg').classList.remove('show')" style="background:#888;color:#fff;width:100%">關閉</button>
+<a class="btn btn-primary btn-lg" id="dlgLink" href="#" style="display:block">下載 Excel</a>
+<button class="btn btn-secondary" onclick="document.getElementById('dlg').classList.remove('show')" style="width:100%;margin-top:8px">關閉</button>
 </div>
 </div>
+
+</div><!-- /main -->
 
 <script>
 // ── Init ──
@@ -267,78 +142,15 @@ document.getElementById('date').value = new Date().toISOString().split('T')[0];
     }
 })();
 
-// ── Payment defaults ──
-const DEFAULT_PAYMENTS = [
-    {label:'第一期 (簽約訂金)', pct:20, label_pct:'總金額之 20%', desc:'確認施工圖則、清拆及工程保護進場前付清'},
-    {label:'第二期 (泥水水電)', pct:40, label_pct:'總金額之 40%', desc:'水電管線暗埋及泥水工程完工、驗收後付清'},
-    {label:'第三期 (木工油漆)', pct:30, label_pct:'總金額之 30%', desc:'木工現場結構完成、油漆進場及訂造傢俬進場前付清'},
-    {label:'第四期 (工程尾數)', pct:10, label_pct:'總金額之 10%', desc:'全屋工程完工、清潔交吉及驗收完成後付清'},
-];
-const DEFAULT_TERMS = [
-    '本報價單所列工程，於完工後均享有 1 年結構及防漏水工程保養期。',
-    '報價已包含工程期間之第三者責任保險及僱員補償保險（勞保）。',
-    '所有加減工程（Variation Order）必須經雙方書面確認金額及工期變更後方可施工，口頭協議一律無效。',
-    '電位計算定義：單位插座計1個位，雙位插座計1.5個位，燈制與燈位分開計算，現場放線時由雙方核對確認。',
-    '預計工期為 90 個工作天（不計星期日及公眾假期），若因公司原因無故延誤，每逾期一日補償業主 HKD $500。',
-];
-
-function addPayment(data={label:'', pct:25, label_pct:'', desc:''}) {
-    const div = document.getElementById('paymentList');
-    const idx = div.children.length;
-    const row = document.createElement('div'); row.className = 'pay-row';
-    row.innerHTML = `
-        <input value="${escapeHtml(data.label)}" placeholder="期數名">
-        <input class="pct" type="number" value="${data.pct}" placeholder="%" min="0" max="100">%
-        <input value="${escapeHtml(data.label_pct)}" placeholder="比例說明">
-        <input value="${escapeHtml(data.desc)}" placeholder="付款條件說明">
-        <button class="btn btn-del" onclick="this.parentElement.remove()">X</button>`;
-    div.appendChild(row);
-}
-function addTerm(text='') {
-    const div = document.getElementById('termList');
-    const row = document.createElement('div'); row.className = 'term-row';
-    row.innerHTML = `<span style="font-weight:bold;min-width:24px">.</span>
-        <input value="${escapeHtml(text)}" placeholder="條款內容">
-        <button class="btn btn-del" onclick="this.parentElement.remove()">X</button>`;
-    div.appendChild(row);
-    updateTermNums();
-}
-function updateTermNums() {
-    document.querySelectorAll('#termList .term-row').forEach((r, i) => {
-        r.querySelector('span').textContent = (i+1)+'.';
-    });
-}
-function readPayments() {
-    const rows = document.querySelectorAll('#paymentList .pay-row');
-    return Array.from(rows).map(r => {
-        const inputs = r.querySelectorAll('input');
-        const pct = parseFloat(inputs[1]?.value) || 0;
-        return {
-            label: inputs[0]?.value || '',
-            pct: pct / 100,
-            label_pct: inputs[2]?.value || `總金額之 ${pct}%`,
-            desc: inputs[3]?.value || '',
-        };
-    }).filter(p => p.label);
-}
-function readTerms() {
-    const inputs = document.querySelectorAll('#termList input');
-    return Array.from(inputs).map(inp => inp.value).filter(v => v.trim());
-}
-
-// 預設填入 4 期付款 + 5 條條款
-DEFAULT_PAYMENTS.forEach(p => addPayment(p));
-DEFAULT_TERMS.forEach(t => addTerm(t));
-
-// ── Category rules (7 categories) ──
+// ── Category rules ──
 const CATEGORY_RULES = [
-    {name:'安裝代工', keywords:['安裝.*人工','代裝','代工','人工安裝','裝工','連裝工','安裝費','安裝人工']},
-    {name:'清拆工程', keywords:['清拆','清折','清走','拆牆','拆門','拆櫃','拆磚','拆地板','拆卸','拆舊','打拆','垃圾','清場','完工清場','裝修期清場','搭棚','棚架','外牆棚','竹棚','保險費','第三者保險','工程保險','裝修期間保險','保護','保護板','保護地磚','完工清潔','裝修清潔']},
-    {name:'水電工程', keywords:['水喉','來去水','去水喉','大渠','銅喉','英國喉','暗藏包膠銅喉','電制','燈制','插蘇','蘇位','孖蘇','單蘇','13A','20A','供電','電位','電燈','暗線','明喉','菲士箱','菲箱','電箱','漏電總箱','WR1','60A','100A','煤氣','石油氣','熱水爐','煮食爐','乾衣機','洗衣機','冷氣','抽氣扇','抽油煙機','浴室寶','暖風機','暖通機','LED','石英燈','光管','燈帶','門口燈','走廊燈','壁燈','門鐘','TV蘇','電爐','焗爐']},
-    {name:'泥水工程', keywords:['鋪磚','舖磚','磁磚','瓷磚','代鋪','代舖','包底料','包低料','地台','英泥沙','湯英泥沙','批盪','盪英泥沙','企缸','磚牆','沙磚','水泥','砌牆','紅磚','間牆','泥水','盪$','地板','無逢地板','無縫地板','膠地板','木地板','複合地板','防水','防漏','滲水','鋁窗','窗花','鋁板','鋁百葉','鋁天花','強化玻璃','中空玻璃','窗框','窗台石','窗枱石','窗台雲石','窗簾','路軌','窗廉','欄河','露台']},
-    {name:'油漆工程', keywords:['油漆','批灰','油油','起底','起紙','手掃漆','剷底','翻油','ICI','日本漆','乳膠漆','多樂士','立邦','牆紙','牆布','剷牆紙']},
-    {name:'木工工程', keywords:['木門','趟門','暗門','大門','房門','巴士門','鋼門','門框','門鎖','門較','門吸','裝門','換門','天花','燈槽','燈糟','木天花','長條天花','腳線','腳缐','地腳線','木板','膠板','Formica','夾板','德利板','釘板','床板','包陣位','屏風','廚櫃','厨柜','上下櫃','吊櫃','地櫃','高櫃','組合櫃','衣櫃','衣柜','鞋櫃','書櫃','書台','書枱','寫字台','電視櫃','飾物櫃','儲物櫃','層板架','琴架','床','雙人床','單人床','上下床','地台床','梳妝台','雲石','檯面','枱面','台面','台面石','石面','石英石','Corian','櫃桶','櫃面','星盤','昇盤','雙盤','面盤','臉盤','鏡櫃','面盤櫃','拉籃','層板']},
-    {name:'雜項', keywords:['代購','代付','代訂','代買','代支','吸咀','浴屏','玻璃浴屏','潔具','馬桶','坐廁','花灑','龍頭','浴缸','面盆','臉盆','洗手盆','廁所','浴室','清潔','搬運','運輸','雜項','雜物']},
+{name:'安裝代工', keywords:['安裝.*人工','代裝','代工','人工安裝','裝工','連裝工','安裝費','安裝人工']},
+{name:'清拆工程', keywords:['清拆','清折','清走','拆牆','拆門','拆櫃','拆磚','拆地板','拆卸','拆舊','打拆','垃圾','清場','完工清場','裝修期清場','搭棚','棚架','外牆棚','竹棚','保險費','第三者保險','工程保險','裝修期間保險','保護','保護板','保護地磚','完工清潔','裝修清潔']},
+{name:'水電工程', keywords:['水喉','來去水','去水喉','大渠','銅喉','英國喉','暗藏包膠銅喉','電制','燈制','插蘇','蘇位','孖蘇','單蘇','13A','20A','供電','電位','電燈','暗線','明喉','菲士箱','菲箱','電箱','漏電總箱','WR1','60A','100A','煤氣','石油氣','熱水爐','煮食爐','乾衣機','洗衣機','冷氣','抽氣扇','抽油煙機','浴室寶','暖風機','暖通機','LED','石英燈','光管','燈帶','門口燈','走廊燈','壁燈','門鐘','TV蘇','電爐','焗爐']},
+{name:'泥水工程', keywords:['鋪磚','舖磚','磁磚','瓷磚','代鋪','代舖','包底料','包低料','地台','英泥沙','湯英泥沙','批盪','盪英泥沙','企缸','磚牆','沙磚','水泥','砌牆','紅磚','間牆','泥水','盪$','地板','無逢地板','無縫地板','膠地板','木地板','複合地板','防水','防漏','滲水','鋁窗','窗花','鋁板','鋁百葉','鋁天花','強化玻璃','中空玻璃','窗框','窗台石','窗枱石','窗台雲石','窗簾','路軌','窗廉','欄河','露台']},
+{name:'油漆工程', keywords:['油漆','批灰','油油','起底','起紙','手掃漆','剷底','翻油','ICI','日本漆','乳膠漆','多樂士','立邦','牆紙','牆布','剷牆紙']},
+{name:'木工工程', keywords:['木門','趟門','暗門','大門','房門','巴士門','鋼門','門框','門鎖','門較','門吸','裝門','換門','天花','燈槽','燈糟','木天花','長條天花','腳線','腳缐','地腳線','木板','膠板','Formica','夾板','德利板','釘板','床板','包陣位','屏風','廚櫃','厨柜','上下櫃','吊櫃','地櫃','高櫃','組合櫃','衣櫃','衣柜','鞋櫃','書櫃','書台','書枱','寫字台','電視櫃','飾物櫃','儲物櫃','層板架','琴架','床','雙人床','單人床','上下床','地台床','梳妝台','雲石','檯面','枱面','台面','台面石','石面','石英石','Corian','櫃桶','櫃面','星盤','昇盤','雙盤','面盤','臉盤','鏡櫃','面盤櫃','拉籃','層板']},
+{name:'雜項', keywords:['代購','代付','代訂','代買','代支','吸咀','浴屏','玻璃浴屏','潔具','馬桶','坐廁','花灑','龍頭','浴缸','面盆','臉盆','洗手盆','廁所','浴室','清潔','搬運','運輸','雜項','雜物']},
 ];
 const ALL_CATEGORIES = CATEGORY_RULES.map(r => r.name);
 
@@ -352,15 +164,14 @@ function autoCategorize(desc) {
     return '雜項';
 }
 
-// ── Parse ──
+// ── Parse items ──
 function parseItems() {
     const basicText = document.getElementById('basicText').value.trim();
     const additionalText = document.getElementById('additionalText').value.trim();
-    const tbody = document.getElementById('itemsBody');
-    tbody.innerHTML = '';
+    const tbody = document.getElementById('itemsBody'); tbody.innerHTML = '';
     let total = 0;
-    if (basicText) { parseTextBlock(basicText, false).forEach(it => { addItemRow(it); total++; }); }
-    if (additionalText) { parseTextBlock(additionalText, true).forEach(it => { addItemRow(it); total++; }); }
+    if (basicText) { parseBlock(basicText, false).forEach(it => { addRow(it); total++; }); }
+    if (additionalText) { parseBlock(additionalText, true).forEach(it => { addRow(it); total++; }); }
     if (total === 0) {
         tbody.innerHTML = '<tr class="empty-hint"><td colspan="10">未能解析任何項目，請檢查格式：{序號}{描述} {價錢}</td></tr>';
         document.getElementById('parseCount').textContent = '';
@@ -370,7 +181,7 @@ function parseItems() {
     updateSeq(); calcAll();
 }
 
-function parseTextBlock(text, isAdditional) {
+function parseBlock(text, isAdditional) {
     const items = [], lines = text.split('\n');
     for (const line of lines) {
         const t = line.trim(); if (!t) continue;
@@ -385,168 +196,122 @@ function parseTextBlock(text, isAdditional) {
     return items;
 }
 
-// ── Table ──
-function addItemRow(data) {
-    const tbody = document.getElementById('itemsBody');
-    const eh = tbody.querySelector('.empty-hint'); if (eh) eh.remove();
+// ── Table rows ──
+function addRow(data) {
+    const tbody = document.getElementById('itemsBody'); const eh = tbody.querySelector('.empty-hint'); if (eh) eh.remove();
     const tr = document.createElement('tr');
     const isAdd = data.is_additional||false, cat = data.category||'雜項', desc = data.description||'';
     const qty = data.quantity||1, unit = data.unit||'項', price = data.unit_price||0, remark = data.remark||'';
-    tr.innerHTML = `
-        <td class="col-seq"><span class="seq-num">0</span></td>
-        <td class="col-stage"><select class="stage-select" onchange="updateSeq()"><option value="basic" ${!isAdd?'selected':''}>基本工程</option><option value="additional" ${isAdd?'selected':''}>後加工程</option></select></td>
-        <td class="col-cat"><select class="cat-select">${ALL_CATEGORIES.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${c}</option>`).join('')}</select></td>
-        <td class="col-desc"><input type="text" class="desc-input" value="${escapeHtml(desc)}" style="text-align:left"></td>
-        <td class="col-qty"><input type="number" class="qty-input" value="${qty}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
-        <td class="col-unit"><input type="text" class="unit-input" value="${escapeHtml(unit)}"></td>
-        <td class="col-price"><input type="number" class="price-input" value="${price}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
-        <td class="col-amount">$0</td>
-        <td class="col-remark"><input type="text" class="remark-input" value="${escapeHtml(remark)}" style="text-align:left"></td>
-        <td class="col-action"><button class="btn btn-del" onclick="delItem(this)">X</button></td>`;
+    tr.innerHTML = `<td><span class="seq-num">0</span></td>
+<td><select class="stage-select" onchange="updateSeq()"><option value="basic" ${!isAdd?'selected':''}>基本</option><option value="additional" ${isAdd?'selected':''}>後加</option></select></td>
+<td><select class="cat-select">${ALL_CATEGORIES.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${c}</option>`).join('')}</select></td>
+<td><input type="text" class="desc-input" value="${esc(desc)}" style="text-align:left"></td>
+<td><input type="number" class="qty-input" value="${qty}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
+<td><input type="text" class="unit-input" value="${esc(unit)}"></td>
+<td><input type="number" class="price-input" value="${price}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
+<td class="col-amount">$0</td>
+<td><input type="text" class="remark-input" value="${esc(remark)}" style="text-align:left"></td>
+<td><button class="btn btn-danger btn-sm" onclick="delItem(this)">✕</button></td>`;
     tbody.appendChild(tr);
     const qi = tr.querySelector('.qty-input'); if (qi) calcRow(qi);
 }
 
-function addEmptyItem() {
-    addItemRow({is_additional:false, category:'雜項', description:'', quantity:1, unit:'項', unit_price:0, remark:''});
-    updateSeq(); document.getElementById('parseCount').textContent = '';
-}
-function delItem(btn) {
-    const tr = btn.closest('tr'); tr.remove(); updateSeq(); calcAll();
-    const tb = document.getElementById('itemsBody');
-    if (tb.children.length===0) { tb.innerHTML='<tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>'; document.getElementById('parseCount').textContent=''; }
-}
-function updateSeq() {
-    document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach((tr,i) => {
-        const s = tr.querySelector('.seq-num'); if (s) s.textContent = i+1;
-    });
-}
-function calcRow(inp) {
-    const tr = inp.closest('tr');
-    const q = parseFloat(tr.querySelector('.qty-input')?.value)||0;
-    const p = parseFloat(tr.querySelector('.price-input')?.value)||0;
-    const ac = tr.querySelector('.col-amount'); if (ac) ac.textContent = '$'+(q*p).toLocaleString('en-US');
-    calcAll();
-}
-function calcAll() {
-    let t=0; document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(tr=>{
-        const a = parseFloat((tr.querySelector('.col-amount')?.textContent||'$0').replace(/[$,]/g,''))||0; t+=a;
-    });
-    document.getElementById('grandTotal').textContent = '$'+t.toLocaleString('en-US');
-}
-function escapeHtml(s) { if(!s)return''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function addEmptyItem() { addRow({is_additional:false, category:'雜項', description:'', quantity:1, unit:'項', unit_price:0, remark:''}); updateSeq(); document.getElementById('parseCount').textContent = ''; }
+function delItem(btn) { const tr = btn.closest('tr'); tr.remove(); updateSeq(); calcAll(); const tb = document.getElementById('itemsBody'); if (tb.children.length===0) { tb.innerHTML='<tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>'; document.getElementById('parseCount').textContent=''; } }
+function updateSeq() { document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach((tr,i) => { const s = tr.querySelector('.seq-num'); if (s) s.textContent = i+1; }); }
+function calcRow(inp) { const tr = inp.closest('tr'); const q = parseFloat(tr.querySelector('.qty-input')?.value)||0; const p = parseFloat(tr.querySelector('.price-input')?.value)||0; const ac = tr.querySelector('.col-amount'); if (ac) ac.textContent = '$'+(q*p).toLocaleString('en-US'); calcAll(); }
+function calcAll() { let t=0; document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(tr=>{ const a = parseFloat((tr.querySelector('.col-amount')?.textContent||'$0').replace(/[$,]/g,''))||0; t+=a; }); document.getElementById('grandTotal').textContent = '$'+t.toLocaleString('en-US'); }
+function esc(s) { if(!s)return''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// ── Collect ──
+// ── Payments ──
+function addPayment(data={label:'', pct:25, label_pct:'', desc:''}) {
+    const div = document.getElementById('paymentList'); const row = document.createElement('div'); row.className = 'pay-row';
+    row.innerHTML = `<input value="${esc(data.label)}" placeholder="期數名"><input class="pct" type="number" value="${data.pct}" placeholder="%" min="0" max="100">%<input value="${esc(data.label_pct)}" placeholder="比例說明"><input value="${esc(data.desc)}" placeholder="付款條件說明"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+    div.appendChild(row);
+}
+function addTerm(text='') { const div = document.getElementById('termList'); const row = document.createElement('div'); row.className = 'term-row'; row.innerHTML = `<span style="font-weight:bold;min-width:24px">.</span><input value="${esc(text)}" placeholder="條款內容"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateTermNums()">✕</button>`; div.appendChild(row); updateTermNums(); }
+function updateTermNums() { document.querySelectorAll('#termList .term-row').forEach((r,i)=>{ r.querySelector('span').textContent=(i+1)+'.'; }); }
+
+// ── Collect & Generate ──
 function collectData() {
     const items = [];
     document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(tr=>{
-        const desc = tr.querySelector('.desc-input')?.value.trim()||'';
-        if (!desc) return;
-        items.push({
-            is_additional: (tr.querySelector('.stage-select')?.value||'basic')==='additional',
-            category: tr.querySelector('.cat-select')?.value||'雜項',
-            description: desc,
-            quantity: parseFloat(tr.querySelector('.qty-input')?.value)||0,
-            unit: tr.querySelector('.unit-input')?.value.trim()||'項',
-            unit_price: parseFloat(tr.querySelector('.price-input')?.value)||0,
-            remark: tr.querySelector('.remark-input')?.value.trim()||'',
-        });
+        const desc = tr.querySelector('.desc-input')?.value.trim()||''; if (!desc) return;
+        items.push({ is_additional: (tr.querySelector('.stage-select')?.value||'basic')==='additional', category: tr.querySelector('.cat-select')?.value||'雜項', description: desc, quantity: parseFloat(tr.querySelector('.qty-input')?.value)||0, unit: tr.querySelector('.unit-input')?.value.trim()||'項', unit_price: parseFloat(tr.querySelector('.price-input')?.value)||0, remark: tr.querySelector('.remark-input')?.value.trim()||'' });
     });
+    const readPayments = () => { const rows = document.querySelectorAll('#paymentList .pay-row'); return Array.from(rows).map(r => { const inputs = r.querySelectorAll('input'); const pct = parseFloat(inputs[1]?.value)||0; return {label:inputs[0]?.value||'', pct:pct/100, label_pct:inputs[2]?.value||`總金額之 ${pct}%`, desc:inputs[3]?.value||''}; }).filter(p => p.label); };
+    const readTerms = () => { const inputs = document.querySelectorAll('#termList input'); return Array.from(inputs).map(inp => inp.value).filter(v => v.trim()); };
     return {
-        project_name: document.getElementById('project_name').value.trim()||'-',
-        owner_name: document.getElementById('owner_name').value.trim()||'',
-        address: document.getElementById('address').value.trim()||'',
-        company_name: document.getElementById('company_name').value.trim()||'',
-        quotation_no: document.getElementById('quotation_no').value.trim()||'',
-        date: document.getElementById('date').value||new Date().toISOString().split('T')[0],
-        validity: document.getElementById('validity').value.trim()||'',
-        version: document.getElementById('version').value.trim()||'',
-        deposit: parseFloat(document.getElementById('deposit').value)||0,
-        items: items,
-        show_payment: document.getElementById('showPayment').checked,
-        show_terms: document.getElementById('showTerms').checked,
-        payments: readPayments(),
-        terms: readTerms(),
+        project_name: document.getElementById('project_name').value.trim()||'-', owner_name: document.getElementById('owner_name').value.trim()||'',
+        address: document.getElementById('address').value.trim()||'', company_name: document.getElementById('company_name').value.trim()||'',
+        quotation_no: document.getElementById('quotation_no').value.trim()||'', date: document.getElementById('date').value||new Date().toISOString().split('T')[0],
+        validity: document.getElementById('validity').value.trim()||'', version: document.getElementById('version').value.trim()||'',
+        deposit: parseFloat(document.getElementById('deposit').value)||0, items,
+        show_payment: document.getElementById('showPayment').checked, payments: readPayments(),
+        show_terms: document.getElementById('showTerms').checked, terms: readTerms(),
     };
 }
 
 async function generate(type) {
-    const data = collectData();
-    if (data.items.length===0) { showMsg('請至少填寫一個工程項目！','error'); return; }
-    const btns = document.querySelectorAll('.btn-gen'); btns.forEach(b=>b.disabled=true);
+    const data = collectData(); if (data.items.length===0) { showMsg('請至少填寫一個工程項目！','error'); return; }
+    const btns = document.querySelectorAll('.btn-primary.btn-lg'); btns.forEach(b=>b.disabled=true);
     showMsg('正在生成中…','');
     try {
-        const resp = await fetch('/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({type:type, data:data})});
+        const resp = await fetch('/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({type, data})});
         if (!resp.ok) { const err=await resp.json(); throw new Error(err.error||'生成失敗'); }
         const result = await resp.json();
         if (result.preview_id) {
-            const tname = type==='invoice'?'發票':'報價單';
-            const parts = [];
-            if (data.quotation_no) parts.push(data.quotation_no);
-            if (data.address) parts.push(data.address);
-            if (data.owner_name) parts.push(data.owner_name);
-            const ds = (data.date||'').replace(/-/g,'');
-            if (ds) parts.push(ds);
-            if (!parts.length) parts.push(ds||'-');
-            const fname = parts.join('_') + '_' + tname + '.xlsx';
+            const tname = type==='invoice'?'發票':'報價單'; const parts = [];
+            if (data.quotation_no) parts.push(data.quotation_no); if (data.address) parts.push(data.address); if (data.owner_name) parts.push(data.owner_name);
+            const ds = (data.date||'').replace(/-/g,''); if (ds) parts.push(ds); if (!parts.length) parts.push(ds||'-');
             document.getElementById('dlgTitle').textContent = tname + '已生成';
-            document.getElementById('dlgFile').textContent = fname;
+            document.getElementById('dlgFile').textContent = parts.join('_') + '_' + tname + '.xlsx';
             document.getElementById('dlgLink').href = '/download/' + result.preview_id + '/excel';
-            document.getElementById('dlg').classList.add('show');
-            showMsg('','');
+            document.getElementById('dlg').classList.add('show'); showMsg('','');
         }
     } catch(err) { showMsg('生成失敗：'+err.message,'error'); }
     finally { btns.forEach(b=>b.disabled=false); }
 }
 function showMsg(t,c) { const m=document.getElementById('msg'); m.textContent=t; m.className='msg '+c; }
 
+// ── Upload ──
 async function uploadExcel() {
-    const file = document.getElementById('uploadFile').files[0];
-    if (!file) return;
-    const um = document.getElementById('uploadMsg');
-    um.textContent = '解析中…';
+    const file = document.getElementById('uploadFile').files[0]; if (!file) return;
+    const um = document.getElementById('uploadMsg'); um.textContent = '解析中…';
     const fd = new FormData(); fd.append('file', file);
     try {
         const resp = await fetch('/upload', {method:'POST', body:fd});
         if (!resp.ok) { const err=await resp.json(); throw new Error(err.error||'失敗'); }
         const data = await resp.json();
-
-        // Fill header
         const fields = ['project_name','owner_name','address','company_name','quotation_no','date','validity','version','deposit'];
-        fields.forEach(f => {
-            const el = document.getElementById(f);
-            if (el && data[f] !== undefined) el.value = data[f] || '';
-        });
-
-        // Fill items → textareas
-        const basicLines = [], addLines = [];
-        (data.items||[]).forEach(it => {
-            const line = `${it.description} ${it.unit_price}`;
-            if (it.is_additional) addLines.push(line);
-            else basicLines.push(line);
-        });
+        fields.forEach(f => { const el = document.getElementById(f); if (el && data[f] !== undefined) el.value = data[f] || ''; });
+        const basicLines=[], addLines=[];
+        (data.items||[]).forEach(it => { const line=`${it.description} ${it.unit_price}`; if (it.is_additional) addLines.push(line); else basicLines.push(line); });
         document.getElementById('basicText').value = basicLines.join('\n');
-        document.getElementById('additionalText').value = addLines.join('\n');
-        parseItems();
-
-        // Fill payments
-        document.getElementById('paymentList').innerHTML = '';
-        (data.payments||[]).forEach(p => addPayment(p));
-        document.getElementById('showPayment').checked = data.show_payment || (data.payments||[]).length > 0;
-
-        // Fill terms
-        document.getElementById('termList').innerHTML = '';
-        (data.terms||[]).forEach(t => addTerm(t));
-        document.getElementById('showTerms').checked = data.show_terms || (data.terms||[]).length > 0;
-        updateTermNums();
-
-        um.textContent = '匯入成功：' + (data._filename || file.name);
-        setTimeout(()=>{um.textContent='';}, 5000);
-    } catch(err) {
-        um.textContent = '匯入失敗：'+err.message;
-    }
+        document.getElementById('additionalText').value = addLines.join('\n'); parseItems();
+        document.getElementById('paymentList').innerHTML=''; (data.payments||[]).forEach(p=>addPayment(p)); document.getElementById('showPayment').checked=(data.payments||[]).length>0;
+        document.getElementById('termList').innerHTML=''; (data.terms||[]).forEach(t=>addTerm(t)); document.getElementById('showTerms').checked=(data.terms||[]).length>0; updateTermNums();
+        um.textContent = '匯入成功：' + (data._filename||file.name);
+        setTimeout(()=>{um.textContent='';}, 4000);
+    } catch(err) { um.textContent = '匯入失敗：'+err.message; }
 }
+
+// Default payments/terms
+const DEFAULT_PAYMENTS = [
+    {label:'第一期 (簽約訂金)',pct:20,label_pct:'總金額之 20%',desc:'確認施工圖則、清拆及工程保護進場前付清'},
+    {label:'第二期 (泥水水電)',pct:40,label_pct:'總金額之 40%',desc:'水電管線暗埋及泥水工程完工、驗收後付清'},
+    {label:'第三期 (木工油漆)',pct:30,label_pct:'總金額之 30%',desc:'木工現場結構完成、油漆進場及訂造傢俬進場前付清'},
+    {label:'第四期 (工程尾數)',pct:10,label_pct:'總金額之 10%',desc:'全屋工程完工、清潔交吉及驗收完成後付清'},
+];
+const DEFAULT_TERMS = [
+    '本報價單所列工程，於完工後均享有 1 年結構及防漏水工程保養期。',
+    '報價已包含工程期間之第三者責任保險及僱員補償保險（勞保）。',
+    '所有加減工程（Variation Order）必須經雙方書面確認金額及工期變更後方可施工，口頭協議一律無效。',
+    '電位計算定義：單位插座計1個位，雙位插座計1.5個位，燈制與燈位分開計算，現場放線時由雙方核對確認。',
+    '預計工期為 90 個工作天（不計星期日及公眾假期），若因公司原因無故延誤，每逾期一日補償業主 HKD $500。',
+];
+DEFAULT_PAYMENTS.forEach(p => addPayment(p));
+DEFAULT_TERMS.forEach(t => addTerm(t));
 </script>
-</div></div>
 </body>
 </html>
