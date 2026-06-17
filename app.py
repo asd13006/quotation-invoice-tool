@@ -91,26 +91,10 @@ def upload():
                         if val and val != 'None' and val != '-':
                             result[key] = val
 
-        # Scan for item rows: seq number + description + price
-        items = []
-        for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
-            if not row or row[0] is None: continue
-            r = row[0].row
-            a = str(ws.cell(row=r, column=1).value or '').strip()
-            b = str(ws.cell(row=r, column=2).value or '').strip()
-            # Look for sequence number: "1", "1)", "1.1", "2.3" etc
-            is_seq = bool(re.match(r'^\d+[\.\)]?\s*$', a) or re.match(r'^\d+\.\d+$', a))
-            if is_seq and len(b) > 2:
-                # Unit price is in column E (5th column)
-                e = ws.cell(row=r, column=5).value
-                price = int(e) if isinstance(e, (int, float)) else 0
-                # qty from column C (3rd column)
-                c = ws.cell(row=r, column=3).value
-                qty = int(c) if isinstance(c, (int, float)) and float(c) > 0 else 1
-                items.append({'category': '雜項', 'description': b, 'quantity': qty,
-                              'unit': '項', 'unit_price': price, 'remark': '',
-                              'is_additional': False})
-        result['items'] = items
+        # Universal item parser — auto-detect column layout
+        items = _parse_items_universal(ws)
+        result['items'] = [{**it, 'category': _auto_categorize(it['description']),
+                            'is_additional': False} for it in items]
 
         # Parse payments & terms
         for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
@@ -313,6 +297,79 @@ def _make_filename(data, title):
     if date.strip(): parts.append(date.strip())
     if not parts: parts.append(date or '-')
     return '_'.join(parts) + '_' + title
+
+
+def _parse_items_universal(ws):
+    """Universal item parser — auto-detect column layout"""
+    items = []
+    col_desc, col_qty, col_price = _detect_columns(ws)
+    skip = set(['項目','編號','描述','總計','TOTAL','小計','合計','訂金','尾款','備註','地址','日期','名稱','電話','傳真','公司','客戶','No.','Item','Qty','Unit','Price','Amount','Subtotal','工程付款','條款','付款期數','付款條件'])
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+        if not row or row[0] is None: continue
+        r = row[0].row
+        a = str(ws.cell(row=r, column=1).value or '').strip()
+        b = str(ws.cell(row=r, column=2).value or '').strip()
+        # Section header detection
+        if not a.isdigit() and 2 <= len(a) <= 6 and not any(k in a for k in skip): continue
+        if b and not b[0].isdigit() and 2 <= len(b) <= 6 and not any(k in b for k in skip): continue
+        # Description from detected column
+        desc = str(ws.cell(row=r, column=col_desc).value or '').strip()
+        # Fallback: try column A for old invoice format
+        if (not desc or len(desc) < 2):
+            a_text = str(ws.cell(row=r, column=1).value or '').strip()
+            if len(a_text) > 3 and not a_text[0].isdigit(): desc = a_text
+        if not desc or len(desc) < 2: continue
+        if any(k in desc for k in skip): continue
+        # Sequence check
+        seq = a
+        is_seq = bool(re.match(r'^\d+[\.\)]?\s*$', seq) or re.match(r'^\d+\.\d+$', seq) or re.match(r'^\d+\)?$', seq))
+        price_val = ws.cell(row=r, column=col_price).value
+        has_price = isinstance(price_val, (int, float)) and float(price_val) >= 0
+        is_item = (is_seq and len(desc) >= 2) or (has_price and len(desc) > 2)
+        if is_item and not desc.startswith('='):
+            try: qty = int(float(ws.cell(row=r, column=col_qty).value or 1))
+            except: qty = 1
+            try: price = int(float(price_val)) if price_val else 0
+            except: price = 0
+            items.append({'description': desc, 'quantity': qty, 'unit': '項', 'unit_price': price, 'remark': ''})
+    return items
+
+
+def _detect_columns(ws):
+    """Auto-detect desc/qty/price columns from data patterns"""
+    cd, cq, cp = 2, 3, 5
+    nc, tc = {}, {}
+    for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row, 200)):
+        r = row[0].row
+        for c in range(1, min(ws.max_column + 1, 12)):
+            v = ws.cell(row=r, column=c).value
+            if isinstance(v, (int, float)) and float(v) > 0: nc[c] = nc.get(c, 0) + 1
+            if isinstance(v, str) and len(v) > 3: tc[c] = tc.get(c, 0) + 1
+    # Price = rightmost column with >= 2 numbers
+    for c, _ in sorted(nc.items(), key=lambda x: -x[0]):
+        if nc.get(c, 0) >= 2: cp = c; break
+    # Desc = column left of price with most text (not col A)
+    if tc:
+        al = {}
+        for c in tc:
+            lens = []
+            for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row, 40)):
+                v = str(ws.cell(row=row[0].row, column=c).value or '')
+                if len(v) > 1: lens.append(len(v))
+            al[c] = sum(lens) / max(len(lens), 1)
+        for c, _ in sorted(tc.items(), key=lambda x: (-al.get(x[0], 0), -x[1])):
+            if c < cp and c != 1 and tc.get(c, 0) >= 2 and al.get(c, 0) > 5: cd = c; break
+    # Qty = between desc and price
+    for c in range(cd + 1, cp):
+        if nc.get(c, 0) >= 2: cq = c; break
+    return cd, cq, cp
+
+
+def _auto_categorize(desc):
+    for cat, kws in {'清拆工程':['清拆','拆','垃圾','棚架','保險'],'水電工程':['水喉','電制','插蘇','煤氣','冷氣','菲士','供電','燈'],'泥水工程':['鋪磚','磁磚','瓷磚','英泥沙','防水','地板','地台','企缸','鋁窗','窗台'],'油漆工程':['油漆','批灰','油油','起底','鏟底','ICI','乳膠漆'],'木工工程':['門','櫃','床','天花','腳線','廚櫃','衣櫃','雲石'],'安裝代工':['安裝','代裝','人工']}.items():
+        for kw in kws:
+            if kw in desc: return cat
+    return '雜項'
 
 
 def _build_download_page(pid, title, data, fname):
