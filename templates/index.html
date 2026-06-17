@@ -429,8 +429,17 @@ async function generate(type) {
         if (!resp.ok) { const err=await resp.json(); throw new Error(err.error||'生成失敗'); }
         const result = await resp.json();
         if (result.preview_id) {
-            document.getElementById('dlgTitle').textContent = (type==='invoice'?'發票':'報價單') + '已生成';
-            document.getElementById('dlgFile').textContent = data.address||data.project_name||'';
+            const tname = type==='invoice'?'發票':'報價單';
+            const parts = [];
+            if (data.quotation_no) parts.push(data.quotation_no);
+            if (data.address) parts.push(data.address);
+            if (data.owner_name) parts.push(data.owner_name);
+            const ds = (data.date||'').replace(/-/g,'');
+            if (ds) parts.push(ds);
+            if (!parts.length) parts.push(ds||'output');
+            const fname = parts.join('_') + '_' + tname + '.xlsx';
+            document.getElementById('dlgTitle').textContent = tname + '已生成';
+            document.getElementById('dlgFile').textContent = fname;
             document.getElementById('dlgLink').href = '/download/' + result.preview_id + '/excel';
             document.getElementById('dlg').classList.add('show');
             showMsg('','');
