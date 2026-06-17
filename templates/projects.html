@@ -27,12 +27,14 @@
 <input class="search-input" type="text" placeholder="搜尋工程單…" oninput="filterList()" id="searchInput">
 
 {% if grouped %}
-<div class="project-list">
+<div class="project-list" style="background:none;box-shadow:none;border:none">
 {% for g in grouped %}
 {% if g.type == 'year' %}
-<div class="year-header" data-search="{{ g.label }}"><span>{{ g.label }}</span></div>
+{% if not loop.first %}</div>{% endif %}
+<div class="year-card">
+<div class="year-header">{{ g.label }}</div>
 {% elif g.type == 'month' %}
-<div class="month-header" data-search="{{ g.label }}">
+<div class="month-header">
 <span class="month-label">{{ g.label }}</span>
 <span class="month-count">{{ g.count }} 張單</span>
 </div>
