@@ -16,6 +16,9 @@
 <a href="/" class="active"><span class="icon">📝</span>新增報價單</a>
 <a href="/projects"><span class="icon">📂</span>工程單列表</a>
 <a href="#" onclick="document.getElementById('uploadFile').click()"><span class="icon">📥</span>匯入 Excel</a>
+<div style="margin-top:auto;padding:8px 14px">
+<button class="theme-toggle" onclick="toggleTheme()" title="切換淺色/暗黑模式">🌓</button>
+</div>
 </div>
 
 <!-- Main -->
@@ -116,6 +119,18 @@
 </div><!-- /main -->
 
 <script>
+// ── Theme toggle ──
+(function() {
+    const saved = localStorage.getItem('theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+})();
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+}
+
 // ── Init ──
 document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
