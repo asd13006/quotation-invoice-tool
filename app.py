@@ -198,7 +198,9 @@ def login_page():
         code = request.form.get('code', '').strip()
 
         # Step 1: email submitted → send code
-        if email == allowed and not code:
+        if not code:
+            if email != allowed:
+                return _login_page_html(error='此郵箱未獲授權，請輸入正確郵箱')
             try:
                 _send_code(email)
                 return _login_page_html(email=email, sent=True)
