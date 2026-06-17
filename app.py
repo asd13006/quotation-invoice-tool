@@ -221,27 +221,58 @@ def login_page():
 
 
 def _login_page_html(email='', sent=False, error=''):
-    glass_css = '''body{font-family:'Microsoft JhengHei',sans-serif;background:linear-gradient(135deg,#e0e7f0,#d5ddef);display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-.card{background:rgba(255,255,255,0.55);backdrop-filter:blur(20px);border-radius:18px;padding:40px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.08);border:1px solid rgba(255,255,255,.5);max-width:380px;width:90%}
-h1{font-size:22px;margin-bottom:4px;color:#1e293b}h1 span{font-size:12px;color:#94a3b8;display:block;margin-top:4px}
-p{color:#64748b;font-size:14px;margin-bottom:20px}
-input{padding:12px 14px;border:1px solid rgba(0,0,0,.1);border-radius:10px;font-size:15px;width:100%;margin-bottom:10px;text-align:center;letter-spacing:4px;font-family:monospace;background:rgba(255,255,255,.6);backdrop-filter:blur(4px)}
-button{padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 4px 14px rgba(59,130,246,.25)}
-button:hover{background:#2563eb}.error{color:#ef4444;font-size:13px;margin-bottom:10px}.success{color:#22c55e;font-size:13px;margin-bottom:10px}
-@media(prefers-color-scheme:dark){body{background:linear-gradient(135deg,#0f172a,#1a1f35)}h1{color:#e2e8f0}.card{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}p{color:#94a3b8}input{background:rgba(30,41,59,.7);border-color:rgba(255,255,255,.1);color:#e2e8f0}}'''
+    css = '''
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Microsoft JhengHei','微軟正黑體',sans-serif;background:linear-gradient(135deg,#e0e7f0,#dce3ed,#e8edf5,#d5ddef);background-attachment:fixed;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+body::before{content:'';position:fixed;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,0.08) 0%,transparent 70%);top:-200px;right:-100px;border-radius:50%;pointer-events:none;z-index:0}
+.card{position:relative;z-index:1;background:rgba(255,255,255,0.55);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:18px;padding:44px 36px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.08);border:1px solid rgba(255,255,255,0.5);max-width:400px;width:100%}
+.icon{font-size:40px;margin-bottom:12px}
+h1{font-size:20px;margin-bottom:4px;color:#1e293b;font-weight:700}
+h1 span{font-size:12px;color:#94a3b8;display:block;margin-top:4px;font-weight:400}
+p.desc{color:#64748b;font-size:14px;margin:16px 0 20px;line-height:1.5}
+.email-display{background:rgba(59,130,246,0.08);color:#3b82f6;padding:6px 14px;border-radius:20px;font-size:13px;display:inline-block;margin-bottom:16px;font-weight:500}
+input.email-input{padding:13px 16px;border:1px solid rgba(0,0,0,.1);border-radius:10px;font-size:16px;width:100%;margin-bottom:12px;background:rgba(255,255,255,.6);backdrop-filter:blur(4px);color:#1e293b;font-family:'Microsoft JhengHei',sans-serif}
+input.code-input{padding:14px;border:1px solid rgba(0,0,0,.1);border-radius:10px;font-size:24px;width:100%;margin-bottom:12px;text-align:center;letter-spacing:8px;font-family:'SF Mono','Fira Code','Consolas',monospace;background:rgba(255,255,255,.6);backdrop-filter:blur(4px);color:#1e293b}
+input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+button{padding:13px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 4px 14px rgba(59,130,246,.25);transition:background .15s}
+button:hover{background:#2563eb}
+.error{color:#ef4444;font-size:13px;margin-bottom:10px}
+.success{color:#22c55e;font-size:13px;margin-bottom:10px}
+.resend{color:#94a3b8;font-size:12px;margin-top:12px}
+.resend a{color:#3b82f6;text-decoration:none}
+@media(prefers-color-scheme:dark){
+body{background:linear-gradient(135deg,#0f172a,#1a1f35,#0d1525)}
+h1{color:#e2e8f0}.desc{color:#94a3b8}
+.card{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}
+.email-display{background:rgba(59,130,246,.15)}
+input.email-input{background:rgba(30,41,59,.7);border-color:rgba(255,255,255,.1);color:#e2e8f0}
+input.code-input{background:rgba(30,41,59,.7);border-color:rgba(255,255,255,.1);color:#e2e8f0}
+}
+'''
     error_html = f'<div class="error">{error}</div>' if error else ''
     success_html = '<div class="success">驗證碼已發送到你的郵箱</div>' if sent else ''
 
     if sent:
-        body = f'''<h1>驗證碼已發送<span>請檢查郵箱</span></h1>{success_html}{error_html}
+        body = f'''
+<div class="icon">📬</div>
+<h1>驗證碼已發送<span>請檢查郵箱</span></h1>
+<div class="email-display">{email}</div>
+{success_html}{error_html}
 <form method="POST"><input type="hidden" name="email" value="{email}">
-<input type="text" name="code" placeholder="輸入 6 位數字驗證碼" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus>
-<button type="submit">驗證登入</button></form>'''
+<input class="code-input" type="text" name="code" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus>
+<button type="submit">驗證登入</button></form>
+<p class="resend">收唔到？<a href="/login">重新發送</a></p>'''
     else:
-        body = f'''<h1>工程單助手<span>Email 驗證登入</span></h1><p>輸入註冊郵箱接收一次性驗證碼</p>{error_html}
-<form method="POST"><input type="email" name="email" placeholder="your@email.com" autofocus><button type="submit">發送驗證碼</button></form>'''
+        body = f'''
+<div class="icon">📋</div>
+<h1>工程單助手<span>Email 驗證登入</span></h1>
+<p class="desc">輸入授權郵箱，接收一次性驗證碼</p>
+{error_html}
+<form method="POST">
+<input class="email-input" type="email" name="email" placeholder="your@email.com" autofocus>
+<button type="submit">發送驗證碼</button></form>'''
 
-    return f'<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>登入 — 工程單助手</title><style>{glass_css}</style></head><body><div class="card">{body}</div></body></html>'
+    return f'<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>登入 — 工程單助手</title><style>{css}</style></head><body><div class="card">{body}</div></body></html>'
 
 
 @app.route('/projects')
