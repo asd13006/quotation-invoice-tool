@@ -17,10 +17,10 @@ h1 { text-align: center; color: #002F5597; margin-bottom: 24px; font-size: 24px;
 .form-group label { font-size: 13px; font-weight: bold; color: #555; }
 .form-group input, .form-group select, .form-group textarea {
     padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px;
-    font-size: 13px; font-family: inherit;
+    font-size: 16px; font-family: inherit; /* 16px prevents iOS zoom */
 }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-    outline: none; border-color: #002F5597; box-shadow: 0 0 0 2px rgba(0,47,89,0.12);
+.form-group input:focus-visible, .form-group select:focus-visible, .form-group textarea:focus-visible {
+    outline: 2px solid #002F5597; outline-offset: 1px;
 }
 
 /* Textareas */
@@ -31,12 +31,12 @@ h1 { text-align: center; color: #002F5597; margin-bottom: 24px; font-size: 24px;
 .textarea-group textarea {
     width: 100%; height: 200px; padding: 10px;
     border: 2px solid #ddd; border-radius: 8px;
-    font-size: 13px; font-family: 'Microsoft JhengHei', '微軟正黑體', monospace;
+    font-size: 16px; font-family: 'Microsoft JhengHei', '微軟正黑體', monospace;
     line-height: 1.7; resize: vertical;
 }
-.textarea-group textarea:focus { border-color: #002F5597; }
+.textarea-group textarea:focus-visible { border-color: #002F5597; outline: none; }
 
-.btn { padding: 8px 18px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.btn { padding: 8px 18px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-family: inherit; transition: transform 0.15s, background 0.15s, opacity 0.15s; }
 .btn:active { transform: scale(0.97); }
 .btn-parse { display: block; margin: 0 auto 10px; background: #002F5597; color: #fff; font-size: 15px; font-weight: bold; padding: 10px 36px; }
 .btn-parse:hover { background: #001f3f; }
@@ -54,8 +54,8 @@ thead th { background: #002F5597; color: #fff; padding: 8px 4px; text-align: cen
 tbody td { padding: 5px; text-align: center; vertical-align: middle; }
 tbody tr:nth-child(odd) { background: #fafafa; }
 tbody tr:hover { background: #eef2fa; }
-tbody input, tbody select { width: 100%; padding: 6px 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: inherit; text-align: inherit; }
-tbody input:focus, tbody select:focus { outline: none; border-color: #002F5597; }
+tbody input, tbody select { width: 100%; padding: 6px 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; text-align: inherit; }
+tbody input:focus-visible, tbody select:focus-visible { outline: 2px solid #002F5597; outline-offset: 1px; }
 .col-seq { width: 48px; }
 .col-stage { width: 72px; }
 .col-cat { width: 100px; }
@@ -74,7 +74,7 @@ tbody td.col-amount { font-weight: bold; color: #002F5597; font-size: 13px; }
 
 /* Buttons */
 .btn-bar { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.btn-gen { padding: 14px 36px; font-size: 17px; font-weight: bold; border-radius: 8px; cursor: pointer; border: none; background: #002F5597; color: #fff; transition: all 0.2s; }
+.btn-gen { padding: 14px 36px; font-size: 17px; font-weight: bold; border-radius: 8px; cursor: pointer; border: none; background: #002F5597; color: #fff; transition: background 0.2s, opacity 0.2s; }
 .btn-gen:hover:not(:disabled) { background: #001f3f; }
 .btn-gen:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -85,7 +85,7 @@ tbody td.col-amount { font-weight: bold; color: #002F5597; font-size: 13px; }
 .empty-hint { text-align: center; padding: 30px; color: #999; }
 
 /* Modal */
-.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center }
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center; overscroll-behavior:contain }
 .modal-overlay.show { display:flex }
 .modal { background:#fff; border-radius:12px; padding:32px; text-align:center; max-width:380px; width:90%; box-shadow:0 8px 30px rgba(0,0,0,0.2) }
 .modal h3 { color:#002F5597; margin-bottom:8px; font-size:18px }
@@ -98,7 +98,7 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
 .pay-row input, .term-row input { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; font-family: inherit; }
 .pay-row input.pct { flex: 0 0 80px; text-align: center; }
 
-@media (max-width: 768px) { .textarea-row { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .textarea-row { grid-template-columns: 1fr; } .btn-gen { padding: 12px 24px; font-size: 15px; } }
 </style>
 </head>
 <body>
@@ -108,9 +108,9 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
 <!-- Upload -->
 <div class="card" style="text-align:center; padding:14px;">
     <input type="file" id="uploadFile" accept=".xlsx" style="display:none" onchange="uploadExcel()">
-    <button class="btn" style="background:#E4EAF3; color:#1a1a1a;" onclick="document.getElementById('uploadFile').click()">
+    <label for="uploadFile" class="btn" style="background:#E4EAF3; color:#1a1a1a; cursor:pointer">
         匯入 Excel（反向填表）
-    </button>
+    </label>
     <span id="uploadMsg" style="margin-left:12px; font-size:13px; color:#888;"></span>
 </div>
 
@@ -118,15 +118,15 @@ details summary { cursor: pointer; font-size: 14px; font-weight: bold; color: #0
 <div class="card">
     <h2>基本資料</h2>
     <div class="info-grid">
-        <div class="form-group"><label>工程名稱</label><input type="text" id="project_name" placeholder="例如：香港九龍某屋苑住宅裝修工程"></div>
-        <div class="form-group"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="例如：陳大文 先生"></div>
-        <div class="form-group"><label>工程地址</label><input type="text" id="address" placeholder="例如：香港九龍尖沙咀..."></div>
-        <div class="form-group"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="例如：卓越室內設計裝修工程有限公司 (BR: 12345678)"></div>
-        <div class="form-group"><label>報價單號</label><input type="text" id="quotation_no" placeholder="例如：QT-202606-001"></div>
-        <div class="form-group"><label>報價日期</label><input type="date" id="date"></div>
-        <div class="form-group"><label>有效期</label><input type="text" id="validity" placeholder="例如：30天內有效"></div>
-        <div class="form-group"><label>版本</label><input type="text" id="version" placeholder="例如：Ver 1.0"></div>
-        <div class="form-group"><label>已付訂金 (HKD)</label><input type="number" id="deposit" placeholder="0" value="0" min="0" step="1"></div>
+        <div class="form-group"><label>工程名稱</label><input type="text" id="project_name" placeholder="例如：香港九龍某屋苑住宅裝修工程…" autocomplete="organization"></div>
+        <div class="form-group"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="例如：陳大文 先生…" autocomplete="name"></div>
+        <div class="form-group"><label>工程地址</label><input type="text" id="address" placeholder="例如：香港九龍尖沙咀…" autocomplete="street-address"></div>
+        <div class="form-group"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="例如：卓越室內設計裝修工程有限公司 (BR: 12345678)…" autocomplete="organization"></div>
+        <div class="form-group"><label>報價單號</label><input type="text" id="quotation_no" placeholder="例如：QT-202606-001…"></div>
+        <div class="form-group"><label>報價日期</label><input type="date" id="date" autocomplete="bday"></div>
+        <div class="form-group"><label>有效期</label><input type="text" id="validity" placeholder="例如：30天內有效…"></div>
+        <div class="form-group"><label>版本</label><input type="text" id="version" placeholder="例如：Ver 1.0…"></div>
+        <div class="form-group"><label>已付訂金 (HKD)</label><input type="number" id="deposit" placeholder="0" value="0" min="0" step="1" autocomplete="off"></div>
     </div>
 </div>
 
