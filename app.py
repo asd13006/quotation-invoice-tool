@@ -65,8 +65,25 @@ def upload():
     try:
         wb = load_workbook(io.BytesIO(file.read()), data_only=True)
         ws = wb.active
-        items = []
+        result = {'items': [], 'payments': [], 'terms': [], 'deposit': 0,
+                  '_filename': file.filename, 'show_payment': False, 'show_terms': False}
+
+        # Parse header
+        header_map = {'工程名稱': 'project_name', '工程地址': 'address',
+                      '客戶姓名': 'owner_name', '業主姓名': 'owner_name',
+                      '裝修公司': 'company_name', '報價單號': 'quotation_no',
+                      '報價日期': 'date', '有效期': 'validity', '版本': 'version'}
+        for r in range(1, 11):
+            for c in range(1, 8):
+                label = str(ws.cell(row=r, column=c).value or '')
+                for kw, key in header_map.items():
+                    if kw in label and '：' in label:
+                        val = str(ws.cell(row=r, column=c+1).value or '')
+                        if val and val != 'None' and val != '-':
+                            result[key] = val
+
         # Scan for item rows: seq number + description + price
+        items = []
         for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
             if not row or row[0] is None: continue
             r = row[0].row
@@ -84,8 +101,8 @@ def upload():
                 items.append({'category': '雜項', 'description': b, 'quantity': qty,
                               'unit': '項', 'unit_price': price, 'remark': '',
                               'is_additional': False})
-        return jsonify({'items': items, 'payments': [], 'terms': [], 'deposit': 0,
-                        '_filename': file.filename, 'show_payment': False, 'show_terms': False})
+        result['items'] = items
+        return jsonify(result)
     except Exception as e:
         return jsonify({'error': f'解析失敗：{str(e)}'}), 500
 
