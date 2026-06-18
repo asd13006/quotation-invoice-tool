@@ -16,6 +16,13 @@ def static_files(filename):
     return send_from_directory('static', filename)
 
 
+@app.route('/minipdf')
+def minipdf_page():
+    if not _check_auth():
+        return '<script>location.href="/login"</script>'
+    return render_template('minipdf.html', version=_VERSION)
+
+
 @app.route('/minipdf/')
 @app.route('/minipdf/<path:filename>')
 def serve_minipdf(filename='index.html'):
