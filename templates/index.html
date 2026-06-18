@@ -4,27 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
-<!-- Tailwind mode: using CDN + custom glass styles. Removed style.css -->
+
 <title>新增報價單 — 工程單助手 {{ version }}</title>
-
 <link rel="stylesheet" href="/static/dist/output.css">
-
-<style>
-.glass{background:rgba(255,255,255,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.5)}
-.dark .glass{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}
-body{background:linear-gradient(135deg,#e0e7f0,#dce3ed,#e8edf5,#d5ddef);background-attachment:fixed}
-.dark body{background:linear-gradient(135deg,#0f172a,#1a1f35,#0d1525)}
-.btn-del{color:#94a3b8;background:rgba(0,0,0,.04)}.btn-del:hover{background:#ef4444;color:#fff}
-input::placeholder,textarea::placeholder{color:transparent;transition:color .2s}
-input:focus::placeholder,textarea:focus::placeholder{color:#94a3b8}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important}}
-</style>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/dist/output.css">
 </head>
 <body>
-<button class="hidden max-md:block fixed top-2 left-2 z-[51] sb text-white rounded-lg px-3 py-2 text-lg" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
 
 <!-- Sidebar -->
-<div class="sb w-[210px] fixed inset-y-0 left-0 z-50 flex flex-col text-white text-sm overflow-y-auto max-md:-translate-x-full max-md:transition-transform" id="sidebar">
+<div class="sidebar">
 <div class="sidebar-logo">工程單助手<span>{{ version }}</span></div>
 <a href="/" class="active"><span class="icon">＋</span>新增報價單</a>
 <a href="/projects"><span class="icon">☰</span>工程單列表</a>
@@ -36,50 +26,50 @@ input:focus::placeholder,textarea:focus::placeholder{color:#94a3b8}
 </div>
 
 <!-- Main -->
-<div class="ml-[210px] flex-1 p-7 max-md:ml-0 max-md:p-4 relative z-10">
-<h1 class="text-xl font-bold mb-5">新增報價單</h1>
+<div class="main">
+<h1 class="page-title">新增報價單</h1>
 
 <!-- Upload bar -->
-<div class="glass rounded-2xl shadow-sm p-5 mb-4" style="text-align:center;padding:12px 18px">
+<div class="card" style="text-align:center;padding:12px 18px">
     <input type="file" id="uploadFile" accept=".xlsx" style="display:none" onchange="uploadExcel()">
-    <label for="uploadFile" class="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-[11px] font-semibold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" style="cursor:pointer">匯入 Excel（反向填表）</label>
+    <label for="uploadFile" class="btn btn-secondary btn-sm" style="cursor:pointer">匯入 Excel（反向填表）</label>
     <span id="uploadMsg" style="margin-left:10px;font-size:12px;color:var(--text-secondary)"></span>
 </div>
 
 <!-- Basic Info -->
-<div class="glass rounded-2xl shadow-sm p-5 mb-4">
-<div class="text-sm font-bold mb-3 pb-2.5 border-b border-white/20 dark:border-white/[0.08]">基本資料</div>
-<div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
-<div class="flex flex-col gap-1"><label>工程名稱</label><input type="text" id="project_name" placeholder="工程名稱…" autocomplete="organization"></div>
-<div class="flex flex-col gap-1"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="客戶姓名…" autocomplete="name"></div>
-<div class="flex flex-col gap-1"><label>工程地址</label><input type="text" id="address" placeholder="工程地址…" autocomplete="street-address"></div>
-<div class="flex flex-col gap-1"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="公司名 + BR…" autocomplete="organization"></div>
-<div class="flex flex-col gap-1"><label>報價單號</label><input type="text" id="quotation_no" placeholder="報價單號…"></div>
-<div class="flex flex-col gap-1"><label>報價日期</label><input type="date" id="date" autocomplete="bday"></div>
-<div class="flex flex-col gap-1"><label>有效期</label><input type="text" id="validity" placeholder="有效期…"></div>
-<div class="flex flex-col gap-1"><label>版本</label><input type="text" id="version" placeholder="版本…"></div>
-<div class="flex flex-col gap-1"><label>已付訂金 (HKD)</label><input type="number" id="deposit" placeholder="0" value="0" min="0" step="1" autocomplete="off"></div>
+<div class="card">
+<div class="card-header">基本資料</div>
+<div class="form-grid">
+<div class="form-group"><label>工程名稱</label><input type="text" id="project_name" placeholder="工程名稱…" autocomplete="organization"></div>
+<div class="form-group"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="客戶姓名…" autocomplete="name"></div>
+<div class="form-group"><label>工程地址</label><input type="text" id="address" placeholder="工程地址…" autocomplete="street-address"></div>
+<div class="form-group"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="公司名 + BR…" autocomplete="organization"></div>
+<div class="form-group"><label>報價單號</label><input type="text" id="quotation_no" placeholder="報價單號…"></div>
+<div class="form-group"><label>報價日期</label><input type="date" id="date" autocomplete="bday"></div>
+<div class="form-group"><label>有效期</label><input type="text" id="validity" placeholder="有效期…"></div>
+<div class="form-group"><label>版本</label><input type="text" id="version" placeholder="版本…"></div>
+<div class="form-group"><label>已付訂金 (HKD)</label><input type="number" id="deposit" placeholder="0" value="0" min="0" step="1" autocomplete="off"></div>
 </div>
 </div>
 
 <!-- Items input -->
-<div class="glass rounded-2xl shadow-sm p-5 mb-4">
-<div class="text-sm font-bold mb-3 pb-2.5 border-b border-white/20 dark:border-white/[0.08]">工程項目</div>
-<div class="grid grid-cols-2 gap-3 mb-2.5 max-md:grid-cols-1">
-<div class="flex flex-col gap-1.5">
+<div class="card">
+<div class="card-header">工程項目</div>
+<div class="textarea-row">
+<div class="textarea-group">
 <label>基本工程 <span class="hint">— {序號}{描述} {價錢}（價錢可省略）</span></label>
 <textarea id="basicText" placeholder="1兩間浴室清拆磁磚 1000&#10;2全屋地板清拆 2000&#10;3拆牆身一幅 5000&#10;4油漆全屋起底批灰 700&#10;…"></textarea>
 </div>
-<div class="flex flex-col gap-1.5">
+<div class="textarea-group">
 <label>後加工程 <span class="hint">— 冇後加就留空</span></label>
 <textarea id="additionalText" placeholder="1全屋新造水喉 21000&#10;…"></textarea>
 </div>
 </div>
 <button class="btn btn-primary btn-lg btn-cta" onclick="parseItems()" style="display:block;margin:0 auto">解析項目（自動分類）</button>
-<div class="text-center text-xs text-slate-400 my-1.5" id="parseCount"></div>
+<div class="parse-count" id="parseCount"></div>
 
-<div class="overflow-x-auto">
-<table class="w-full text-xs border-collapse">
+<div class="table-wrap">
+<table>
 <thead><tr>
 <th style="width:48px">序號</th><th style="width:72px">階段</th><th style="width:100px">分類</th>
 <th style="min-width:220px">項目描述</th><th style="width:55px">數量</th><th style="width:55px">單位</th>
@@ -87,49 +77,49 @@ input:focus::placeholder,textarea:focus::placeholder{color:#94a3b8}
 <th style="width:140px">備註</th><th style="width:45px"></th>
 </tr></thead>
 <tbody id="itemsBody">
-<tr class="text-center text-slate-400 py-8"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>
+<tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>
 </tbody>
 </table>
 </div>
-<button class="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-[11px] font-semibold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" onclick="addEmptyItem()" style="margin-top:8px">＋ 手動新增項目</button>
-<div class="flex justify-end items-center gap-4 mt-3 pt-2.5 border-t border-white/20 dark:border-white/[0.08] text-sm">
-<span class="font-semibold text-slate-500 dark:text-slate-400">總計 (HKD)：</span>
-<span class="text-[22px] font-bold text-sky-500" id="grandTotal">$0</span>
+<button class="btn btn-secondary btn-sm" onclick="addEmptyItem()" style="margin-top:8px">＋ 手動新增項目</button>
+<div class="summary-row">
+<span class="summary-label">總計 (HKD)：</span>
+<span class="summary-value" id="grandTotal">$0</span>
 </div>
 </div>
 
 <!-- Payment + Terms -->
-<div class="glass rounded-2xl shadow-sm p-5 mb-4">
-<div class="text-sm font-bold mb-3 pb-2.5 border-b border-white/20 dark:border-white/[0.08]">付款階段及備註條款</div>
+<div class="card">
+<div class="card-header">付款階段及備註條款</div>
 <details>
 <summary><label style="cursor:pointer"><input type="checkbox" id="showTerms" style="margin-right:6px">備註條款</label></summary>
 <div id="termList"></div>
-<button class="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-[11px] font-semibold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" onclick="addTerm()" style="margin-top:6px">＋ 新增條款</button>
+<button class="btn btn-secondary btn-sm" onclick="addTerm()" style="margin-top:6px">＋ 新增條款</button>
 </details>
 <details style="margin-top:8px">
 <summary><label style="cursor:pointer"><input type="checkbox" id="showPayment" style="margin-right:6px">付款階段</label></summary>
 <div id="paymentList"></div>
-<button class="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-[11px] font-semibold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" onclick="addPayment()" style="margin-top:6px">＋ 新增付款期</button>
+<button class="btn btn-secondary btn-sm" onclick="addPayment()" style="margin-top:6px">＋ 新增付款期</button>
 </details>
 </div>
 
 <!-- Generate -->
-<div class="glass rounded-2xl shadow-sm p-5 mb-4" style="text-align:center">
-<button class="px-8 py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-base shadow-lg shadow-sky-500/25 transition-all active:scale-95" onclick="generate('quotation')">生成報價單</button>
-<button class="px-8 py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-base shadow-lg shadow-sky-500/25 transition-all active:scale-95" onclick="generate('invoice')" style="margin-left:8px">生成發票</button>
-<div id="msg" ></div>
+<div class="card" style="text-align:center">
+<button class="btn btn-primary btn-lg" onclick="generate('quotation')">生成報價單</button>
+<button class="btn btn-primary btn-lg" onclick="generate('invoice')" style="margin-left:8px">生成發票</button>
+<div id="msg" class="msg"></div>
 </div>
 
 <!-- Modal -->
-<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[999] justify-center items-center overscroll-contain" id="dlg" id="dlg">
-<div class="glass rounded-2xl p-9 text-center max-w-[420px] w-[90%] shadow-2xl">
+<div class="modal-overlay" id="dlg">
+<div class="modal">
 <h3 id="dlgTitle">已生成</h3>
 <p id="dlgFile"></p>
 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">
-<a class="px-8 py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-base shadow-lg shadow-sky-500/25 transition-all active:scale-95" id="dlgLink" href="#" style="flex:1;min-width:160px;text-align:center">下載 Excel</a>
+<a class="btn btn-primary btn-lg" id="dlgLink" href="#" style="flex:1;min-width:160px;text-align:center">下載 Excel</a>
 <button class="btn btn-secondary btn-lg" onclick="showMiniPdf()" style="flex:1;min-width:160px">MiniPdf 轉換 PDF</button>
 </div>
-<button class="inline-flex items-center gap-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition" onclick="document.getElementById('dlg').classList.add('hidden');dlg.classList.remove('flex')" style="width:100%;margin-top:8px">關閉</button>
+<button class="btn btn-secondary" onclick="document.getElementById('dlg').classList.remove('show')" style="width:100%;margin-top:8px">關閉</button>
 </div>
 </div>
 
@@ -138,20 +128,15 @@ input:focus::placeholder,textarea:focus::placeholder{color:#94a3b8}
 <script>
 // ── Theme ──
 (function() {
-    var saved = localStorage.getItem('theme');
-    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
-        document.documentElement.classList.add('dark');
-    }
+    const saved = localStorage.getItem('theme');
+    if (saved) { document.documentElement.setAttribute('data-theme', saved); return; }
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.setAttribute('data-theme', 'light');
 })();
 function toggleTheme() {
-    var html = document.documentElement;
-    if (html.classList.contains('dark')) {
-        html.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-    } else {
-        html.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-    }
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
 }
 
 // ── Init ──
@@ -211,7 +196,7 @@ function parseItems() {
     if (basicText) { parseBlock(basicText, false).forEach(it => { addRow(it); total++; }); }
     if (additionalText) { parseBlock(additionalText, true).forEach(it => { addRow(it); total++; }); }
     if (total === 0) {
-        tbody.innerHTML = '<tr class="text-center text-slate-400 py-8"><td colspan="10">未能解析任何項目，請檢查格式：{序號}{描述} {價錢}</td></tr>';
+        tbody.innerHTML = '<tr class="empty-hint"><td colspan="10">未能解析任何項目，請檢查格式：{序號}{描述} {價錢}</td></tr>';
         document.getElementById('parseCount').textContent = '';
     } else {
         document.getElementById('parseCount').textContent = '已解析 ' + total + ' 個項目，請檢查分類是否正確';
@@ -241,21 +226,21 @@ function addRow(data) {
     const isAdd = data.is_additional||false, cat = data.category||'雜項', desc = data.description||'';
     const qty = data.quantity||1, unit = data.unit||'項', price = data.unit_price||0, remark = data.remark||'';
     tr.innerHTML = `<td><span class="seq-num">0</span></td>
-<td><select class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition" onchange="updateSeq()"><option value="basic" ${!isAdd?'selected':''}>基本</option><option value="additional" ${isAdd?'selected':''}>後加</option></select></td>
-<td><select class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition">${ALL_CATEGORIES.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${c}</option>`).join('')}</select></td>
-<td><input type="text" class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition" value="${esc(desc)}" style="text-align:left"></td>
-<td><input type="number" class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition" value="${qty}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
-<td><input type="text" class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition" value="${esc(unit)}"></td>
-<td><input type="number" class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition" value="${price}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
+<td><select class="stage-select" onchange="updateSeq()"><option value="basic" ${!isAdd?'selected':''}>基本</option><option value="additional" ${isAdd?'selected':''}>後加</option></select></td>
+<td><select class="cat-select">${ALL_CATEGORIES.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${c}</option>`).join('')}</select></td>
+<td><input type="text" class="desc-input" value="${esc(desc)}" style="text-align:left"></td>
+<td><input type="number" class="qty-input" value="${qty}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
+<td><input type="text" class="unit-input" value="${esc(unit)}"></td>
+<td><input type="number" class="price-input" value="${price}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
 <td class="col-amount">$0</td>
-<td><input type="text" class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition" value="${esc(remark)}" style="text-align:left"></td>
-<td><button class="btn-del px-2 py-1 rounded text-[11px] font-semibold transition" onclick="delItem(this)">✕</button></td>`;
+<td><input type="text" class="remark-input" value="${esc(remark)}" style="text-align:left"></td>
+<td><button class="btn btn-danger btn-sm btn-del" onclick="delItem(this)">✕</button></td>`;
     tbody.appendChild(tr);
     const qi = tr.querySelector('.qty-input'); if (qi) calcRow(qi);
 }
 
 function addEmptyItem() { addRow({is_additional:false, category:'雜項', description:'', quantity:1, unit:'項', unit_price:0, remark:''}); updateSeq(); document.getElementById('parseCount').textContent = ''; }
-function delItem(btn) { const tr = btn.closest('tr'); tr.remove(); updateSeq(); calcAll(); const tb = document.getElementById('itemsBody'); if (tb.children.length===0) { tb.innerHTML='<tr class="text-center text-slate-400 py-8"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>'; document.getElementById('parseCount').textContent=''; } }
+function delItem(btn) { const tr = btn.closest('tr'); tr.remove(); updateSeq(); calcAll(); const tb = document.getElementById('itemsBody'); if (tb.children.length===0) { tb.innerHTML='<tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>'; document.getElementById('parseCount').textContent=''; } }
 function updateSeq() { document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach((tr,i) => { const s = tr.querySelector('.seq-num'); if (s) s.textContent = i+1; }); }
 function calcRow(inp) { const tr = inp.closest('tr'); const q = parseFloat(tr.querySelector('.qty-input')?.value)||0; const p = parseFloat(tr.querySelector('.price-input')?.value)||0; const ac = tr.querySelector('.col-amount'); if (ac) ac.textContent = '$'+(q*p).toLocaleString('en-US'); calcAll(); }
 function calcAll() { let t=0; document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(tr=>{ const a = parseFloat((tr.querySelector('.col-amount')?.textContent||'$0').replace(/[$,]/g,''))||0; t+=a; }); document.getElementById('grandTotal').textContent = '$'+t.toLocaleString('en-US'); }
@@ -264,10 +249,10 @@ function esc(s) { if(!s)return''; return s.replace(/&/g,'&amp;').replace(/</g,'&
 // ── Payments ──
 function addPayment(data={label:'', pct:25, label_pct:'', desc:''}) {
     const div = document.getElementById('paymentList'); const row = document.createElement('div'); row.className = 'pay-row';
-    row.innerHTML = `<input value="${esc(data.label)}" placeholder="期數名"><input class="px-2.5 py-2 border border-black/10 dark:border-white/10 rounded-lg text-sm bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition" type="number" value="${data.pct}" placeholder="%" min="0" max="100">%<input value="${esc(data.label_pct)}" placeholder="比例說明"><input value="${esc(data.desc)}" placeholder="付款條件說明"><button class="btn-del px-2 py-1 rounded text-[11px] font-semibold transition" onclick="this.parentElement.remove()">✕</button>`;
+    row.innerHTML = `<input value="${esc(data.label)}" placeholder="期數名"><input class="pct" type="number" value="${data.pct}" placeholder="%" min="0" max="100">%<input value="${esc(data.label_pct)}" placeholder="比例說明"><input value="${esc(data.desc)}" placeholder="付款條件說明"><button class="btn btn-danger btn-sm btn-del" onclick="this.parentElement.remove()">✕</button>`;
     div.appendChild(row);
 }
-function addTerm(text='') { const div = document.getElementById('termList'); const row = document.createElement('div'); row.className = 'term-row'; row.innerHTML = `<span style="font-weight:bold;min-width:24px">.</span><input value="${esc(text)}" placeholder="條款內容"><button class="btn-del px-2 py-1 rounded text-[11px] font-semibold transition" onclick="this.parentElement.remove();updateTermNums()">✕</button>`; div.appendChild(row); updateTermNums(); }
+function addTerm(text='') { const div = document.getElementById('termList'); const row = document.createElement('div'); row.className = 'term-row'; row.innerHTML = `<span style="font-weight:bold;min-width:24px">.</span><input value="${esc(text)}" placeholder="條款內容"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateTermNums()">✕</button>`; div.appendChild(row); updateTermNums(); }
 function updateTermNums() { document.querySelectorAll('#termList .term-row').forEach((r,i)=>{ r.querySelector('span').textContent=(i+1)+'.'; }); }
 
 // ── Collect & Generate ──
@@ -305,7 +290,7 @@ async function generate(type) {
             document.getElementById('dlgTitle').textContent = tname + '已生成';
             document.getElementById('dlgFile').textContent = parts.join('_') + '_' + tname + '.xlsx';
             document.getElementById('dlgLink').href = '/download/' + result.preview_id + '/excel';
-            document.getElementById('dlg').classList.remove('hidden');dlg.classList.add('flex'); showMsg('','');
+            document.getElementById('dlg').classList.add('show'); showMsg('','');
         }
     } catch(err) { showMsg('生成失敗：'+err.message,'error'); }
     finally { btns.forEach(b=>b.disabled=false); }
