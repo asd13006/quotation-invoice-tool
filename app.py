@@ -38,10 +38,13 @@ def index():
     # Serve Vite SPA for main routes
     if not _check_auth():
         return '<script>location.href="/login"</script>'
-    spa_path = os.path.join(os.path.dirname(__file__), 'frontend', 'index.html')
-    if os.path.exists(spa_path):
-        return open(spa_path, encoding='utf-8').read()
-    # Fallback: old Flask template
+    # Try Vite-built SPA first, then source, then old template
+    for spa_path in [
+        os.path.join(os.path.dirname(__file__), 'static', 'dist-spa', 'index.html'),
+        os.path.join(os.path.dirname(__file__), 'frontend', 'index.html'),
+    ]:
+        if os.path.exists(spa_path):
+            return open(spa_path, encoding='utf-8').read()
     return render_template('index.html', version=_VERSION)
 
 
