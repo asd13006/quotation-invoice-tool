@@ -4,46 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
-<link rel="stylesheet" href="/static/style.css">
+
 <title>工程單列表 — 工程單助手 {{ version }}</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'}</script>
+<style>
+.glass{background:rgba(255,255,255,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.5)}
+.dark .glass{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}
+body{background:linear-gradient(135deg,#e0e7f0,#dce3ed,#e8edf5,#d5ddef);background-attachment:fixed}
+.dark body{background:linear-gradient(135deg,#0f172a,#1a1f35,#0d1525)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important}}
+</style>
 </head>
 <body>
-<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+<button class="hidden max-md:block fixed top-2 left-2 z-[51] sb text-white rounded-lg px-3 py-2 text-lg" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
 
-<div class="sidebar">
-<div class="sidebar-logo">工程單助手<span>{{ version }}</span></div>
+<div class="sb w-[210px] fixed inset-y-0 left-0 z-50 flex flex-col text-white text-sm overflow-y-auto max-md:-translate-x-full max-md:transition-transform" id="sidebar">
+<div class="px-4 pt-5 pb-4 border-b border-white/10 font-bold text-[15px] tracking-wide">工程單助手<span>{{ version }}</span></div>
 <a href="/"><span class="icon">＋</span>新增報價單</a>
 <a href="/projects" class="active"><span class="icon">☰</span>工程單列表</a>
 <a href="/minipdf"><span class="icon">⇄</span>MiniPdf 轉換器</a>
 <div style="margin-top:auto;padding:8px 14px">
-<button class="theme-toggle" onclick="toggleTheme()" title="切換淺色/暗黑模式">🌓</button>
+<button class="border border-white/15 rounded-full w-9 h-9 flex items-center justify-center text-base hover:bg-white/10 transition" onclick="toggleTheme()" title="切換淺色/暗黑模式">🌓</button>
 </div>
 </div>
 
-<div class="main">
-<h1 class="page-title">工程單列表</h1>
+<div class="ml-[210px] flex-1 p-7 max-md:ml-0 max-md:p-4 relative z-10">
+<h1 class="text-xl font-bold mb-5">工程單列表</h1>
 
 <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px">同步自 Google Drive</p>
 
-<input class="search-input" type="text" placeholder="搜尋工程單…" oninput="filterList()" id="searchInput">
+<input class="w-full px-3 py-2.5 border border-black/10 dark:border-white/10 rounded-xl text-sm mb-3.5 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" type="text" placeholder="搜尋工程單…" oninput="filterList()" id="searchInput">
 
 {% if grouped %}
-<div class="project-list" style="background:none;box-shadow:none;border:none">
+<div class="overflow-hidden" style="background:none;box-shadow:none;border:none">
 {% for g in grouped %}
 {% if g.type == 'year' %}
 {% if not loop.first %}</details>{% endif %}
-<details class="year-card" open>
-<summary class="year-header">{{ g.label }}</summary>
+<details class="glass rounded-2xl shadow-sm mb-4 overflow-hidden" open>
+<summary class="flex items-center gap-2.5 px-5 py-4 text-base font-bold bg-sky-500/6 dark:bg-sky-500/10 border-b border-white/20 dark:border-white/[0.08] cursor-pointer">{{ g.label }}</summary>
 {% elif g.type == 'month' %}
-<div class="month-header">
-<span class="month-label">{{ g.label }}</span>
-<span class="month-count">{{ g.count }} 張單</span>
+<div class="flex items-center gap-2.5 px-5 py-2.5 pl-8 bg-sky-500/3 dark:bg-sky-500/5 border-b border-white/20 dark:border-white/[0.08]">
+<span class="font-semibold text-[13px] text-sky-500">{{ g.label }}</span>
+<span class="text-[11px] text-slate-500 dark:text-slate-400 ml-auto">{{ g.count }} 張單</span>
 </div>
 {% else %}
-<div class="project-item" data-search="{{ g.data.name }} {{ g.ym }}" onclick="loadProject('{{ g.data.id }}')">
+<div class="flex items-center gap-3 px-5 py-3.5 border-b border-white/20 dark:border-white/[0.08] hover:bg-sky-500/[0.04] transition" data-search="{{ g.data.name }} {{ g.ym }}" onclick="loadProject('{{ g.data.id }}')">
 <span style="font-size:18px">📄</span>
 <div style="flex:1;min-width:0">
-<div class="project-item-name">{{ g.data.name }}</div>
+<div class="font-semibold text-[13px] truncate flex-1 cursor-pointer">{{ g.data.name }}</div>
 <div style="font-size:11px;color:var(--text-secondary)">{{ g.data.size_kb }}KB · {{ g.data.date }}</div>
 </div>
 </div>
@@ -52,7 +62,7 @@
 </details>
 </div>
 {% else %}
-<div class="card"><div class="empty-hint">未找到工程單。請確保已分享 Google Drive folder 給 Service Account。</div></div>
+<div class="glass rounded-2xl shadow-sm p-5 mb-4"><div class="text-center text-slate-400 py-8">未找到工程單。請確保已分享 Google Drive folder 給 Service Account。</div></div>
 {% endif %}
 </div>
 
