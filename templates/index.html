@@ -4,8 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
-<link rel="stylesheet" href="/static/style.css">
+<!-- Tailwind mode: using CDN + custom glass styles. Removed style.css -->
 <title>新增報價單 — 工程單助手 {{ version }}</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'}</script>
+<style>
+.glass{background:rgba(255,255,255,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.5)}
+.dark .glass{background:rgba(30,41,59,.6);border-color:rgba(255,255,255,.08)}
+body{background:linear-gradient(135deg,#e0e7f0,#dce3ed,#e8edf5,#d5ddef);background-attachment:fixed}
+.dark body{background:linear-gradient(135deg,#0f172a,#1a1f35,#0d1525)}
+.btn-del{color:#94a3b8;background:rgba(0,0,0,.04)}.btn-del:hover{background:#ef4444;color:#fff}
+input::placeholder,textarea::placeholder{color:transparent;transition:color .2s}
+input:focus::placeholder,textarea:focus::placeholder{color:#94a3b8}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important}}
+</style>
 </head>
 <body>
 <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
