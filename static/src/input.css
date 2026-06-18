@@ -9,9 +9,11 @@
 .dark .glass { background: rgba(30, 41, 59, 0.6); border-color: rgba(255, 255, 255, 0.08); }
 body { background: linear-gradient(135deg, #e0e7f0, #dce3ed, #e8edf5, #d5ddef); background-attachment: fixed; }
 .dark body { background: linear-gradient(135deg, #0f172a, #1a1f35, #0d1525); }
-.sb { background: rgba(15, 20, 35, 0.92); backdrop-filter: blur(20px); }
-.light .sb { background: rgba(255, 255, 255, 0.85); color: #1e293b; border-right: 1px solid rgba(0, 0, 0, 0.06); }
-.light .sb a { color: #64748b; } .light .sb a:hover { color: #1e293b; }
+.sb { background: rgba(255, 255, 255, 0.85); color: #1e293b; border-right: 1px solid rgba(0, 0, 0, 0.06); }
+.sb a { color: #64748b; } .sb a:hover { color: #1e293b; }
+.dark .sb { background: rgba(15, 20, 35, 0.92); color: #fff; border-right: 1px solid rgba(255,255,255,0.06); }
+.dark .sb a { color: rgba(255,255,255,0.65); } .dark .sb a:hover { color: #ddd; }
+.dark .sb a.active { color: #60a5fa; }
 .btn-del { color: #94a3b8; background: rgba(0, 0, 0, 0.04); }
 .btn-del:hover { background: #ef4444; color: #fff; }
 input::placeholder, textarea::placeholder { color: transparent; transition: color 0.2s; }
