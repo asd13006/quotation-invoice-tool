@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && npm run build:css && pip install -r requirements.txt",
+  "buildCommand": "pip install -r requirements.txt && curl -sL https://github.com/tailwindlabs/tailwindcss/releases/download/v4.0.17/tailwindcss-linux-x64 -o tailwindcss && chmod +x tailwindcss && ./tailwindcss -i static/src/input.css -o static/dist/output.css --minify",
   "builds": [
     {
       "src": "app.py",
