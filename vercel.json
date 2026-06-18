@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pip install -r requirements.txt && curl -sL https://github.com/tailwindlabs/tailwindcss/releases/download/v4.0.17/tailwindcss-linux-x64 -o tailwindcss && chmod +x tailwindcss && ./tailwindcss -i static/src/input.css -o static/dist/output.css --minify",
+  "buildCommand": "cd frontend && npm install && npx vite build && cd .. && pip install -r requirements.txt",
   "builds": [
     {
       "src": "app.py",
@@ -7,6 +7,18 @@
     }
   ],
   "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/static/dist-spa/assets/$1"
+    },
+    {
+      "src": "/src/(.*)",
+      "dest": "/static/dist-spa/src/$1"
+    },
+    {
+      "src": "/vite.svg",
+      "dest": "/static/dist-spa/vite.svg"
+    },
     {
       "src": "/minipdf/(.*)",
       "dest": "app.py"
@@ -24,13 +36,19 @@
     {
       "source": "/minipdf/_framework/(.*\\.wasm)",
       "headers": [
-        {"key": "Content-Type", "value": "application/wasm"}
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
       ]
     },
     {
       "source": "/minipdf/_framework/(.*\\.dll)",
       "headers": [
-        {"key": "Content-Type", "value": "application/octet-stream"}
+        {
+          "key": "Content-Type",
+          "value": "application/octet-stream"
+        }
       ]
     }
   ]

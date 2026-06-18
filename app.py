@@ -35,8 +35,13 @@ with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:
 
 @app.route('/')
 def index():
+    # Serve Vite SPA for main routes
     if not _check_auth():
         return '<script>location.href="/login"</script>'
+    spa_path = os.path.join(os.path.dirname(__file__), 'frontend', 'index.html')
+    if os.path.exists(spa_path):
+        return open(spa_path, encoding='utf-8').read()
+    # Fallback: old Flask template
     return render_template('index.html', version=_VERSION)
 
 
@@ -327,6 +332,16 @@ def projects_page():
     except Exception as e:
         return f'<h1>無法連接 Google Drive</h1><p>{e}</p><a href="/">返回</a>', 500
     return render_template('projects.html', grouped=grouped, version=_VERSION)
+
+
+@app.route('/api/projects/list')
+def api_project_list():
+    if not _check_auth(): return jsonify({'error':'unauthorized'}), 401
+    try:
+        projects = list_projects()
+        return jsonify(projects)
+    except Exception as e:
+        return jsonify({'error':str(e)}), 500
 
 
 @app.route('/api/projects/<file_id>')
