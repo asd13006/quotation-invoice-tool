@@ -1,4 +1,5 @@
 {
+  "buildCommand": "npm install && npm run build:css && pip install -r requirements.txt",
   "builds": [
     {
       "src": "app.py",

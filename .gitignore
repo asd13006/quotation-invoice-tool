@@ -11,3 +11,6 @@ __pycache__/
 .env
 MiniPdf_src/
 service-account.json
+node_modules/
+static/dist/
+tailwindcss.exe

@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.dark .glass {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+body {
+  background: linear-gradient(135deg, #e0e7f0, #dce3ed, #e8edf5, #d5ddef);
+  background-attachment: fixed;
+}
+.dark body {
+  background: linear-gradient(135deg, #0f172a, #1a1f35, #0d1525);
+}
+.sb {
+  background: rgba(15, 20, 35, 0.92);
+  backdrop-filter: blur(20px);
+}
+.light .sb {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1e293b;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+.light .sb a { color: #64748b; }
+.light .sb a:hover { color: #1e293b; }
+.btn-del { color: #94a3b8; background: rgba(0, 0, 0, 0.04); }
+.btn-del:hover { background: #ef4444; color: #fff; }
+input::placeholder, textarea::placeholder { color: transparent; transition: color 0.2s; }
+input:focus::placeholder, textarea:focus::placeholder { color: #94a3b8; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; }
+}
