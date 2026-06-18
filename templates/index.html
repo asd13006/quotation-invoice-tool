@@ -293,7 +293,20 @@ async function generate(type) {
     finally { btns.forEach(b=>b.disabled=false); }
 }
 function showMsg(t,c) { const m=document.getElementById('msg'); m.textContent=t; m.className='msg '+c; }
-function showMiniPdf() { location.href='/minipdf'; }
+function showMiniPdf() {
+    // Auto-download Excel first
+    const link = document.getElementById('dlgLink');
+    if (link && link.href) {
+        const a = document.createElement('a');
+        a.href = link.href;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+    // Then navigate to MiniPdf
+    setTimeout(function(){ location.href='/minipdf'; }, 500);
+}
 
 // ── Upload ──
 async function uploadExcel() {
