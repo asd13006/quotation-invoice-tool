@@ -29,7 +29,7 @@
 <!-- Upload bar -->
 <div class="card" style="text-align:center;padding:12px 18px">
     <input type="file" id="uploadFile" accept=".xlsx" style="display:none" onchange="uploadExcel()">
-    <label for="uploadFile" class="btn btn-secondary btn-sm" style="cursor:pointer">📥 匯入 Excel（反向填表）</label>
+    <label for="uploadFile" class="btn btn-secondary btn-sm" style="cursor:pointer">匯入 Excel（反向填表）</label>
     <span id="uploadMsg" style="margin-left:10px;font-size:12px;color:var(--text-secondary)"></span>
 </div>
 
@@ -37,14 +37,14 @@
 <div class="card">
 <div class="card-header">基本資料</div>
 <div class="form-grid">
-<div class="form-group"><label>工程名稱</label><input type="text" id="project_name" placeholder="例如：香港九龍某屋苑住宅裝修工程…" autocomplete="organization"></div>
-<div class="form-group"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="例如：陳大文 先生…" autocomplete="name"></div>
-<div class="form-group"><label>工程地址</label><input type="text" id="address" placeholder="例如：香港九龍尖沙咀…" autocomplete="street-address"></div>
-<div class="form-group"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="例如：卓越室內設計裝修工程有限公司 (BR: 12345678)…" autocomplete="organization"></div>
-<div class="form-group"><label>報價單號</label><input type="text" id="quotation_no" placeholder="例如：QT-202606-001…"></div>
+<div class="form-group"><label>工程名稱</label><input type="text" id="project_name" placeholder="工程名稱…" autocomplete="organization"></div>
+<div class="form-group"><label>客戶姓名</label><input type="text" id="owner_name" placeholder="客戶姓名…" autocomplete="name"></div>
+<div class="form-group"><label>工程地址</label><input type="text" id="address" placeholder="工程地址…" autocomplete="street-address"></div>
+<div class="form-group"><label>裝修公司名 + BR</label><input type="text" id="company_name" placeholder="公司名 + BR…" autocomplete="organization"></div>
+<div class="form-group"><label>報價單號</label><input type="text" id="quotation_no" placeholder="報價單號…"></div>
 <div class="form-group"><label>報價日期</label><input type="date" id="date" autocomplete="bday"></div>
-<div class="form-group"><label>有效期</label><input type="text" id="validity" placeholder="例如：30天內有效…"></div>
-<div class="form-group"><label>版本</label><input type="text" id="version" placeholder="例如：Ver 1.0…"></div>
+<div class="form-group"><label>有效期</label><input type="text" id="validity" placeholder="有效期…"></div>
+<div class="form-group"><label>版本</label><input type="text" id="version" placeholder="版本…"></div>
 <div class="form-group"><label>已付訂金 (HKD)</label><input type="number" id="deposit" placeholder="0" value="0" min="0" step="1" autocomplete="off"></div>
 </div>
 </div>
@@ -62,7 +62,7 @@
 <textarea id="additionalText" placeholder="1全屋新造水喉 21000&#10;…"></textarea>
 </div>
 </div>
-<button class="btn btn-primary" onclick="parseItems()" style="display:block;margin:0 auto">解析項目（自動分類）</button>
+<button class="btn btn-primary btn-lg btn-cta" onclick="parseItems()" style="display:block;margin:0 auto">解析項目（自動分類）</button>
 <div class="parse-count" id="parseCount"></div>
 
 <div class="table-wrap">
@@ -102,8 +102,8 @@
 
 <!-- Generate -->
 <div class="card" style="text-align:center">
-<button class="btn btn-primary btn-lg" onclick="generate('quotation')">📄 生成報價單</button>
-<button class="btn btn-primary btn-lg" onclick="generate('invoice')" style="margin-left:8px">🧾 生成發票</button>
+<button class="btn btn-primary btn-lg" onclick="generate('quotation')">生成報價單</button>
+<button class="btn btn-primary btn-lg" onclick="generate('invoice')" style="margin-left:8px">生成發票</button>
 <div id="msg" class="msg"></div>
 </div>
 
@@ -231,7 +231,7 @@ function addRow(data) {
 <td><input type="number" class="price-input" value="${price}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
 <td class="col-amount">$0</td>
 <td><input type="text" class="remark-input" value="${esc(remark)}" style="text-align:left"></td>
-<td><button class="btn btn-danger btn-sm" onclick="delItem(this)">✕</button></td>`;
+<td><button class="btn btn-danger btn-sm btn-del" onclick="delItem(this)">✕</button></td>`;
     tbody.appendChild(tr);
     const qi = tr.querySelector('.qty-input'); if (qi) calcRow(qi);
 }
@@ -246,7 +246,7 @@ function esc(s) { if(!s)return''; return s.replace(/&/g,'&amp;').replace(/</g,'&
 // ── Payments ──
 function addPayment(data={label:'', pct:25, label_pct:'', desc:''}) {
     const div = document.getElementById('paymentList'); const row = document.createElement('div'); row.className = 'pay-row';
-    row.innerHTML = `<input value="${esc(data.label)}" placeholder="期數名"><input class="pct" type="number" value="${data.pct}" placeholder="%" min="0" max="100">%<input value="${esc(data.label_pct)}" placeholder="比例說明"><input value="${esc(data.desc)}" placeholder="付款條件說明"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+    row.innerHTML = `<input value="${esc(data.label)}" placeholder="期數名"><input class="pct" type="number" value="${data.pct}" placeholder="%" min="0" max="100">%<input value="${esc(data.label_pct)}" placeholder="比例說明"><input value="${esc(data.desc)}" placeholder="付款條件說明"><button class="btn btn-danger btn-sm btn-del" onclick="this.parentElement.remove()">✕</button>`;
     div.appendChild(row);
 }
 function addTerm(text='') { const div = document.getElementById('termList'); const row = document.createElement('div'); row.className = 'term-row'; row.innerHTML = `<span style="font-weight:bold;min-width:24px">.</span><input value="${esc(text)}" placeholder="條款內容"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateTermNums()">✕</button>`; div.appendChild(row); updateTermNums(); }
