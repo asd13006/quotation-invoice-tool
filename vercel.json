@@ -7,8 +7,30 @@
   ],
   "routes": [
     {
+      "src": "/minipdf/(.*)",
+      "dest": "app.py"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "app.py"
+    },
+    {
       "src": "/(.*)",
       "dest": "app.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/minipdf/_framework/(.*\\.wasm)",
+      "headers": [
+        {"key": "Content-Type", "value": "application/wasm"}
+      ]
+    },
+    {
+      "source": "/minipdf/_framework/(.*\\.dll)",
+      "headers": [
+        {"key": "Content-Type", "value": "application/octet-stream"}
+      ]
     }
   ]
 }

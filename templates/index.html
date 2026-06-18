@@ -108,11 +108,15 @@
 
 <!-- Modal -->
 <div class="modal-overlay" id="dlg">
-<div class="modal">
+<div class="modal" style="max-width:680px">
 <h3 id="dlgTitle">已生成</h3>
 <p id="dlgFile"></p>
-<a class="btn btn-primary btn-lg" id="dlgLink" href="#" style="display:block">下載 Excel</a>
-<button class="btn btn-secondary" onclick="document.getElementById('dlg').classList.remove('show')" style="width:100%;margin-top:8px">關閉</button>
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">
+<a class="btn btn-primary btn-lg" id="dlgLink" href="#" style="flex:1;min-width:160px;text-align:center">下載 Excel</a>
+<button class="btn btn-secondary btn-lg" onclick="showMiniPdf()" style="flex:1;min-width:160px">MiniPdf 轉換 PDF</button>
+</div>
+<iframe id="minipdfFrame" src="" style="display:none;width:100%;height:500px;border:none;border-radius:8px;margin-top:8px"></iframe>
+<button class="btn btn-secondary" onclick="document.getElementById('dlg').classList.remove('show');document.getElementById('minipdfFrame').style.display='none'" style="width:100%;margin-top:8px">關閉</button>
 </div>
 </div>
 
@@ -289,6 +293,7 @@ async function generate(type) {
     finally { btns.forEach(b=>b.disabled=false); }
 }
 function showMsg(t,c) { const m=document.getElementById('msg'); m.textContent=t; m.className='msg '+c; }
+function showMiniPdf() { const f=document.getElementById('minipdfFrame'); f.src='/minipdf/'; f.style.display='block'; }
 
 // ── Upload ──
 async function uploadExcel() {

@@ -14,6 +14,12 @@ app = Flask(__name__)
 @app.route('/static/<path:filename>')
 def static_files(filename):
     return send_from_directory('static', filename)
+
+
+@app.route('/minipdf/')
+@app.route('/minipdf/<path:filename>')
+def serve_minipdf(filename='index.html'):
+    return send_from_directory('static/minipdf', filename)
 _preview_cache = {}
 
 with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:
