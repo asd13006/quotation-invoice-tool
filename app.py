@@ -9,6 +9,19 @@ from projects import register_project, list_projects_local, get_dashboard_stats,
 
 app = Flask(__name__)
 
+# ── Cache control: prevent stale assets ──
+@app.after_request
+def add_cache_headers(response):
+    if request.path.startswith('/static/'):
+        # Cache static assets for 1 hour, but allow revalidation
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+    else:
+        # Never cache HTML pages
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:
     _VERSION = f.read().strip()
 

@@ -1,5 +1,5 @@
 // Service Worker for 工程單助手 PWA
-const CACHE = 'eg-don-v1';
+const CACHE = 'eg-don-' + self.registration.scope.replace(/[^a-z0-9]/g,'');
 const ASSETS = [
   '/',
   '/static/dist/output.css',
@@ -17,7 +17,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
