@@ -2,26 +2,28 @@
 <html lang="zh-HK">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
-
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#1F4E78">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x1F4CB;</text></svg>">
 <title>新增報價單 — 工程單助手 {{ version }}</title>
+<link rel="manifest" href="/manifest.json">
 <link rel="stylesheet" href="/static/dist/output.css">
 <link rel="stylesheet" href="/static/style.css">
-<link rel="stylesheet" href="/static/dist/output.css">
 </head>
 <body>
-<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#x2630;</button>
 
 <!-- Sidebar -->
 <div class="sidebar">
 <div class="sidebar-logo">工程單助手<span>{{ version }}</span></div>
-<a href="/" class="active"><span class="icon">＋</span>新增報價單</a>
-<a href="/projects"><span class="icon">☰</span>工程單列表</a>
-<a href="#" onclick="document.getElementById('uploadFile').click()"><span class="icon">↑</span>匯入 Excel</a>
-<a href="/minipdf"><span class="icon">⇄</span>MiniPdf 轉換器</a>
+<a href="/" class="active"><span class="icon">&#xFF0B;</span>新增報價單</a>
+<a href="/projects"><span class="icon">&#x2630;</span>工程單列表</a>
+<a href="/dashboard"><span class="icon">&#x1F4CA;</span>Dashboard</a>
+<a href="/projects-manage"><span class="icon">&#x1F4CB;</span>專案管理</a>
+<a href="#" onclick="document.getElementById('uploadFile').click()"><span class="icon">&#x2191;</span>匯入 Excel</a>
+<a href="/minipdf"><span class="icon">&#x21C4;</span>MiniPdf</a>
 <div style="margin-top:auto;padding:8px 14px">
-<button class="theme-toggle" onclick="toggleTheme()" title="切換淺色/暗黑模式">🌓</button>
+<button class="theme-toggle" onclick="toggleTheme()" title="切換淺色/暗黑模式">&#x1F31B;</button>
 </div>
 </div>
 
@@ -81,7 +83,7 @@
 </tbody>
 </table>
 </div>
-<button class="btn btn-secondary btn-sm" onclick="addEmptyItem()" style="margin-top:8px">＋ 手動新增項目</button>
+<button class="btn btn-secondary btn-sm" onclick="addEmptyItem()" style="margin-top:8px">&#xFF0B; 手動新增項目</button>
 <div class="summary-row">
 <span class="summary-label">總計 (HKD)：</span>
 <span class="summary-value" id="grandTotal">$0</span>
@@ -94,12 +96,12 @@
 <details>
 <summary><label style="cursor:pointer"><input type="checkbox" id="showTerms" style="margin-right:6px">備註條款</label></summary>
 <div id="termList"></div>
-<button class="btn btn-secondary btn-sm" onclick="addTerm()" style="margin-top:6px">＋ 新增條款</button>
+<button class="btn btn-secondary btn-sm" onclick="addTerm()" style="margin-top:6px">&#xFF0B; 新增條款</button>
 </details>
 <details style="margin-top:8px">
 <summary><label style="cursor:pointer"><input type="checkbox" id="showPayment" style="margin-right:6px">付款階段</label></summary>
 <div id="paymentList"></div>
-<button class="btn btn-secondary btn-sm" onclick="addPayment()" style="margin-top:6px">＋ 新增付款期</button>
+<button class="btn btn-secondary btn-sm" onclick="addPayment()" style="margin-top:6px">&#xFF0B; 新增付款期</button>
 </details>
 </div>
 
@@ -117,7 +119,11 @@
 <p id="dlgFile"></p>
 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">
 <a class="btn btn-primary btn-lg" id="dlgLink" href="#" style="flex:1;min-width:160px;text-align:center">下載 Excel</a>
-<button class="btn btn-secondary btn-lg" onclick="showMiniPdf()" style="flex:1;min-width:160px">MiniPdf 轉換 PDF</button>
+<a class="btn btn-primary btn-lg" id="dlgDrive" href="#" onclick="saveDriveFromModal(event)" style="flex:1;min-width:160px;text-align:center;background:#0F9D58">存去 Drive</a>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">
+<button class="btn btn-secondary btn-lg" onclick="shareWhatsAppFromModal()" style="flex:1;min-width:160px;background:#25D366;color:#fff">WhatsApp 分享</button>
+<button class="btn btn-secondary btn-lg" onclick="showMiniPdf()" style="flex:1;min-width:160px">MiniPdf 轉 PDF</button>
 </div>
 <button class="btn btn-secondary" onclick="document.getElementById('dlg').classList.remove('show')" style="width:100%;margin-top:8px">關閉</button>
 </div>
@@ -126,229 +132,247 @@
 </div><!-- /main -->
 
 <script>
+// ── PWA Service Worker ──
+if('serviceWorker' in navigator){
+navigator.serviceWorker.register('/sw.js').catch(function(){});
+}
+
 // ── Theme ──
-(function() {
-    const saved = localStorage.getItem('theme');
-    if (saved) { document.documentElement.setAttribute('data-theme', saved); return; }
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute('data-theme', 'dark');
-    else document.documentElement.setAttribute('data-theme', 'light');
+(function(){
+var saved=localStorage.getItem('theme');
+if(saved){document.documentElement.setAttribute('data-theme',saved);return}
+if(window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.setAttribute('data-theme','dark');
+else document.documentElement.setAttribute('data-theme','light');
 })();
-function toggleTheme() {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+function toggleTheme(){
+var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+document.documentElement.setAttribute('data-theme',next);
+localStorage.setItem('theme',next);
 }
 
 // ── Init ──
-document.getElementById('date').value = new Date().toISOString().split('T')[0];
+document.getElementById('date').value=new Date().toISOString().split('T')[0];
 
 // Auto-fill from project list
-(function() {
-    const data = sessionStorage.getItem('loadProject');
-    if (data) {
-        sessionStorage.removeItem('loadProject');
-        try {
-            const d = JSON.parse(data);
-            const fields = ['project_name','owner_name','address','company_name','quotation_no','date','validity','version','deposit'];
-            fields.forEach(f => { const el = document.getElementById(f); if (el && d[f] !== undefined) el.value = d[f] || ''; });
-            const basicLines = [], addLines = [];
-            (d.items||[]).forEach(it => {
-                const line = `${it.description} ${it.unit_price}`;
-                if (it.is_additional) addLines.push(line); else basicLines.push(line);
-            });
-            document.getElementById('basicText').value = basicLines.join('\n');
-            document.getElementById('additionalText').value = addLines.join('\n');
-            parseItems();
-            if (d.payments) { document.getElementById('paymentList').innerHTML = ''; d.payments.forEach(p => addPayment(p)); document.getElementById('showPayment').checked = d.payments.length > 0; }
-            if (d.terms) { document.getElementById('termList').innerHTML = ''; d.terms.forEach(t => addTerm(t)); document.getElementById('showTerms').checked = d.terms.length > 0; updateTermNums(); }
-        } catch(e) {}
-    }
+(function(){
+var data=sessionStorage.getItem('loadProject');
+if(data){
+sessionStorage.removeItem('loadProject');
+try{
+var d=JSON.parse(data);
+var fields=['project_name','owner_name','address','company_name','quotation_no','date','validity','version','deposit'];
+fields.forEach(function(f){var el=document.getElementById(f);if(el&&d[f]!==undefined)el.value=d[f]||''});
+var basicLines=[],addLines=[];
+(d.items||[]).forEach(function(it){
+var line=it.description+' '+it.unit_price;
+if(it.is_additional)addLines.push(line);else basicLines.push(line);
+});
+document.getElementById('basicText').value=basicLines.join('\n');
+document.getElementById('additionalText').value=addLines.join('\n');
+parseItems();
+if(d.payments){document.getElementById('paymentList').innerHTML='';d.payments.forEach(function(p){addPayment(p)})}
+if(d.terms){document.getElementById('termList').innerHTML='';d.terms.forEach(function(t){addTerm(t)});updateTermNums()}
+}catch(e){}
+}
 })();
 
 // ── Category rules ──
-const CATEGORY_RULES = [
-{name:'安裝代工', keywords:['安裝.*人工','代裝','代工','人工安裝','裝工','連裝工','安裝費','安裝人工']},
-{name:'清拆工程', keywords:['清拆','清折','清走','拆牆','拆門','拆櫃','拆磚','拆地板','拆卸','拆舊','打拆','垃圾','清場','完工清場','裝修期清場','搭棚','棚架','外牆棚','竹棚','保險費','第三者保險','工程保險','裝修期間保險','保護','保護板','保護地磚','完工清潔','裝修清潔']},
-{name:'水電工程', keywords:['水喉','來去水','去水喉','大渠','銅喉','英國喉','暗藏包膠銅喉','電制','燈制','插蘇','蘇位','孖蘇','單蘇','13A','20A','供電','電位','電燈','暗線','明喉','菲士箱','菲箱','電箱','漏電總箱','WR1','60A','100A','煤氣','石油氣','熱水爐','煮食爐','乾衣機','洗衣機','冷氣','抽氣扇','抽油煙機','浴室寶','暖風機','暖通機','LED','石英燈','光管','燈帶','門口燈','走廊燈','壁燈','門鐘','TV蘇','電爐','焗爐']},
-{name:'泥水工程', keywords:['鋪磚','舖磚','磁磚','瓷磚','代鋪','代舖','包底料','包低料','地台','英泥沙','湯英泥沙','批盪','盪英泥沙','企缸','磚牆','沙磚','水泥','砌牆','紅磚','間牆','泥水','盪$','地板','無逢地板','無縫地板','膠地板','木地板','複合地板','防水','防漏','滲水','鋁窗','窗花','鋁板','鋁百葉','鋁天花','強化玻璃','中空玻璃','窗框','窗台石','窗枱石','窗台雲石','窗簾','路軌','窗廉','欄河','露台']},
-{name:'油漆工程', keywords:['油漆','批灰','油油','起底','起紙','手掃漆','剷底','翻油','ICI','日本漆','乳膠漆','多樂士','立邦','牆紙','牆布','剷牆紙']},
-{name:'木工工程', keywords:['木門','趟門','暗門','大門','房門','巴士門','鋼門','門框','門鎖','門較','門吸','裝門','換門','天花','燈槽','燈糟','木天花','長條天花','腳線','腳缐','地腳線','木板','膠板','Formica','夾板','德利板','釘板','床板','包陣位','屏風','廚櫃','厨柜','上下櫃','吊櫃','地櫃','高櫃','組合櫃','衣櫃','衣柜','鞋櫃','書櫃','書台','書枱','寫字台','電視櫃','飾物櫃','儲物櫃','層板架','琴架','床','雙人床','單人床','上下床','地台床','梳妝台','雲石','檯面','枱面','台面','台面石','石面','石英石','Corian','櫃桶','櫃面','星盤','昇盤','雙盤','面盤','臉盤','鏡櫃','面盤櫃','拉籃','層板']},
-{name:'雜項', keywords:['代購','代付','代訂','代買','代支','吸咀','浴屏','玻璃浴屏','潔具','馬桶','坐廁','花灑','龍頭','浴缸','面盆','臉盆','洗手盆','廁所','浴室','清潔','搬運','運輸','雜項','雜物']},
+var CATEGORY_RULES=[
+{name:'安裝代工',keywords:['安裝.*人工','代裝','代工','人工安裝','裝工','連裝工','安裝費','安裝人工']},
+{name:'清拆工程',keywords:['清拆','清折','清走','拆牆','拆門','拆櫃','拆磚','拆地板','拆卸','拆舊','打拆','垃圾','清場','完工清場','裝修期清場','搭棚','棚架','外牆棚','竹棚','保險費','第三者保險','工程保險','裝修期間保險','保護','保護板','保護地磚','完工清潔','裝修清潔']},
+{name:'水電工程',keywords:['水喉','來去水','去水喉','大渠','銅喉','英國喉','暗藏包膠銅喉','電制','燈制','插蘇','蘇位','孖蘇','單蘇','13A','20A','供電','電位','電燈','暗線','明喉','菲士箱','菲箱','電箱','漏電總箱','WR1','60A','100A','煤氣','石油氣','熱水爐','煮食爐','乾衣機','洗衣機','冷氣','抽氣扇','抽油煙機','浴室寶','暖風機','暖通機','LED','石英燈','光管','燈帶','門口燈','走廊燈','壁燈','門鐘','TV蘇','電爐','焗爐']},
+{name:'泥水工程',keywords:['鋪磚','舖磚','磁磚','瓷磚','代鋪','代舖','包底料','包低料','地台','英泥沙','湯英泥沙','批盪','盪英泥沙','企缸','磚牆','沙磚','水泥','砌牆','紅磚','間牆','泥水','地板','無逢地板','無縫地板','膠地板','木地板','複合地板','防水','防漏','滲水','鋁窗','窗花','鋁板','鋁百葉','鋁天花','強化玻璃','中空玻璃','窗框','窗台石','窗枱石','窗台雲石','窗簾','路軌','窗廉','欄河','露台']},
+{name:'油漆工程',keywords:['油漆','批灰','油油','起底','起紙','手掃漆','剷底','翻油','ICI','日本漆','乳膠漆','多樂士','立邦','牆紙','牆布','剷牆紙']},
+{name:'木工工程',keywords:['木門','趟門','暗門','大門','房門','巴士門','鋼門','門框','門鎖','門較','門吸','裝門','換門','天花','燈槽','燈糟','木天花','長條天花','腳線','腳缐','地腳線','木板','膠板','Formica','夾板','德利板','釘板','床板','包陣位','屏風','廚櫃','厨柜','上下櫃','吊櫃','地櫃','高櫃','組合櫃','衣櫃','衣柜','鞋櫃','書櫃','書台','書枱','寫字台','電視櫃','飾物櫃','儲物櫃','層板架','琴架','床','雙人床','單人床','上下床','地台床','梳妝台','雲石','檯面','枱面','台面','台面石','石面','石英石','Corian','櫃桶','櫃面','星盤','昇盤','雙盤','面盤','臉盤','鏡櫃','面盤櫃','拉籃','層板']},
+{name:'雜項',keywords:['代購','代付','代訂','代買','代支','吸咀','浴屏','玻璃浴屏','潔具','馬桶','坐廁','花灑','龍頭','浴缸','面盆','臉盆','洗手盆','廁所','浴室','清潔','搬運','運輸','雜項','雜物']},
 ];
-const ALL_CATEGORIES = CATEGORY_RULES.map(r => r.name);
+var ALL_CATEGORIES=CATEGORY_RULES.map(function(r){return r.name});
 
-function autoCategorize(desc) {
-    for (const rule of CATEGORY_RULES) {
-        for (const kw of rule.keywords) {
-            try { if (new RegExp(kw, 'i').test(desc)) return rule.name; }
-            catch(e) { if (desc.includes(kw)) return rule.name; }
-        }
-    }
-    return '雜項';
+function autoCategorize(desc){
+for(var i=0;i<CATEGORY_RULES.length;i++){
+var rule=CATEGORY_RULES[i];
+for(var j=0;j<rule.keywords.length;j++){
+var kw=rule.keywords[j];
+try{if(new RegExp(kw,'i').test(desc))return rule.name}catch(e){if(desc.indexOf(kw)>=0)return rule.name}
+}
+}
+return '雜項';
 }
 
 // ── Parse items ──
-function parseItems() {
-    const basicText = document.getElementById('basicText').value.trim();
-    const additionalText = document.getElementById('additionalText').value.trim();
-    const tbody = document.getElementById('itemsBody'); tbody.innerHTML = '';
-    let total = 0;
-    if (basicText) { parseBlock(basicText, false).forEach(it => { addRow(it); total++; }); }
-    if (additionalText) { parseBlock(additionalText, true).forEach(it => { addRow(it); total++; }); }
-    if (total === 0) {
-        tbody.innerHTML = '<tr class="empty-hint"><td colspan="10">未能解析任何項目，請檢查格式：{序號}{描述} {價錢}</td></tr>';
-        document.getElementById('parseCount').textContent = '';
-    } else {
-        document.getElementById('parseCount').textContent = '已解析 ' + total + ' 個項目，請檢查分類是否正確';
-    }
-    updateSeq(); calcAll();
+function parseItems(){
+var basicText=document.getElementById('basicText').value.trim();
+var additionalText=document.getElementById('additionalText').value.trim();
+var tbody=document.getElementById('itemsBody');tbody.innerHTML='';
+var total=0;
+if(basicText){parseBlock(basicText,false).forEach(function(it){addRow(it);total++})}
+if(additionalText){parseBlock(additionalText,true).forEach(function(it){addRow(it);total++})}
+if(total===0){
+tbody.innerHTML='<tr class="empty-hint"><td colspan="10">未能解析任何項目，請檢查格式：{序號}{描述} {價錢}</td></tr>';
+document.getElementById('parseCount').textContent='';
+}else{
+document.getElementById('parseCount').textContent='已解析 '+total+' 個項目，請檢查分類是否正確';
+}
+updateSeq();calcAll();
 }
 
-function parseBlock(text, isAdditional) {
-    const items = [], lines = text.split('\n');
-    for (const line of lines) {
-        const t = line.trim(); if (!t) continue;
-        const m = t.match(/^(\d+)[.\s、．]*\s*(.+?)\s+(\d+)\s*$/);
-        if (m) { items.push({is_additional:isAdditional, category:autoCategorize(m[2].trim()), description:m[2].trim(), quantity:1, unit:'項', unit_price:parseInt(m[3],10), remark:''}); continue; }
-        const lm = t.match(/^(.+?)\s+(\d+)\s*$/);
-        if (lm) { const d=lm[1].replace(/^\d+[.\s、．]*\s*/,'').trim(); if(d&&parseInt(lm[2],10)>=0) { items.push({is_additional:isAdditional, category:autoCategorize(d), description:d, quantity:1, unit:'項', unit_price:parseInt(lm[2],10), remark:''}); continue; } }
-        const nm = t.match(/^(\d+)[.\s、．]*\s*(.+)$/);
-        if (nm) { const d=nm[2].trim(); if(d) { items.push({is_additional:isAdditional, category:autoCategorize(d), description:d, quantity:1, unit:'項', unit_price:0, remark:''}); continue; } }
-        if (t.length>1) items.push({is_additional:isAdditional, category:autoCategorize(t), description:t, quantity:1, unit:'項', unit_price:0, remark:''});
-    }
-    return items;
+function parseBlock(text,isAdditional){
+var items=[],lines=text.split('\n');
+for(var i=0;i<lines.length;i++){
+var t=lines[i].trim();if(!t)continue;
+var m=t.match(/^(\d+)[.\s、．]*\s*(.+?)\s+(\d+)\s*$/);
+if(m){items.push({is_additional:isAdditional,category:autoCategorize(m[2].trim()),description:m[2].trim(),quantity:1,unit:'項',unit_price:parseInt(m[3],10),remark:''});continue}
+var lm=t.match(/^(.+?)\s+(\d+)\s*$/);
+if(lm){var d=lm[1].replace(/^\d+[.\s、．]*\s*/,'').trim();if(d&&parseInt(lm[2],10)>=0){items.push({is_additional:isAdditional,category:autoCategorize(d),description:d,quantity:1,unit:'項',unit_price:parseInt(lm[2],10),remark:''});continue}}
+var nm=t.match(/^(\d+)[.\s、．]*\s*(.+)$/);
+if(nm){var d2=nm[2].trim();if(d2){items.push({is_additional:isAdditional,category:autoCategorize(d2),description:d2,quantity:1,unit:'項',unit_price:0,remark:''});continue}}
+if(t.length>1)items.push({is_additional:isAdditional,category:autoCategorize(t),description:t,quantity:1,unit:'項',unit_price:0,remark:''});
+}
+return items;
 }
 
 // ── Table rows ──
-function addRow(data) {
-    const tbody = document.getElementById('itemsBody'); const eh = tbody.querySelector('.empty-hint'); if (eh) eh.remove();
-    const tr = document.createElement('tr');
-    const isAdd = data.is_additional||false, cat = data.category||'雜項', desc = data.description||'';
-    const qty = data.quantity||1, unit = data.unit||'項', price = data.unit_price||0, remark = data.remark||'';
-    tr.innerHTML = `<td><span class="seq-num">0</span></td>
-<td><select class="stage-select" onchange="updateSeq()"><option value="basic" ${!isAdd?'selected':''}>基本</option><option value="additional" ${isAdd?'selected':''}>後加</option></select></td>
-<td><select class="cat-select">${ALL_CATEGORIES.map(c=>`<option value="${c}" ${cat===c?'selected':''}>${c}</option>`).join('')}</select></td>
-<td><input type="text" class="desc-input" value="${esc(desc)}" style="text-align:left"></td>
-<td><input type="number" class="qty-input" value="${qty}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
-<td><input type="text" class="unit-input" value="${esc(unit)}"></td>
-<td><input type="number" class="price-input" value="${price}" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td>
-<td class="col-amount">$0</td>
-<td><input type="text" class="remark-input" value="${esc(remark)}" style="text-align:left"></td>
-<td><button class="btn btn-danger btn-sm btn-del" onclick="delItem(this)">✕</button></td>`;
-    tbody.appendChild(tr);
-    const qi = tr.querySelector('.qty-input'); if (qi) calcRow(qi);
+function addRow(data){
+var tbody=document.getElementById('itemsBody');var eh=tbody.querySelector('.empty-hint');if(eh)eh.remove();
+var tr=document.createElement('tr');
+var isAdd=data.is_additional||false,cat=data.category||'雜項',desc=data.description||'';
+var qty=data.quantity||1,unit=data.unit||'項',price=data.unit_price||0,remark=data.remark||'';
+tr.innerHTML='<td><span class="seq-num">0</span></td><td><select class="stage-select" onchange="updateSeq()"><option value="basic" '+(isAdd?'':'selected')+'>基本</option><option value="additional" '+(isAdd?'selected':'')+'>後加</option></select></td><td><select class="cat-select">'+ALL_CATEGORIES.map(function(c){return '<option value="'+c+'" '+(cat===c?'selected':'')+'>'+c+'</option>'}).join('')+'</select></td><td><input type="text" class="desc-input" value="'+esc(desc)+'" style="text-align:left"></td><td><input type="number" class="qty-input" value="'+qty+'" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td><td><input type="text" class="unit-input" value="'+esc(unit)+'"></td><td><input type="number" class="price-input" value="'+price+'" min="0" step="1" onchange="calcRow(this)" oninput="calcRow(this)"></td><td class="col-amount">$0</td><td><input type="text" class="remark-input" value="'+esc(remark)+'" style="text-align:left"></td><td><button class="btn btn-danger btn-sm btn-del" onclick="delItem(this)">&#x2715;</button></td>';
+tbody.appendChild(tr);
+var qi=tr.querySelector('.qty-input');if(qi)calcRow(qi);
 }
 
-function addEmptyItem() { addRow({is_additional:false, category:'雜項', description:'', quantity:1, unit:'項', unit_price:0, remark:''}); updateSeq(); document.getElementById('parseCount').textContent = ''; }
-function delItem(btn) { const tr = btn.closest('tr'); tr.remove(); updateSeq(); calcAll(); const tb = document.getElementById('itemsBody'); if (tb.children.length===0) { tb.innerHTML='<tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>'; document.getElementById('parseCount').textContent=''; } }
-function updateSeq() { document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach((tr,i) => { const s = tr.querySelector('.seq-num'); if (s) s.textContent = i+1; }); }
-function calcRow(inp) { const tr = inp.closest('tr'); const q = parseFloat(tr.querySelector('.qty-input')?.value)||0; const p = parseFloat(tr.querySelector('.price-input')?.value)||0; const ac = tr.querySelector('.col-amount'); if (ac) ac.textContent = '$'+(q*p).toLocaleString('en-US'); calcAll(); }
-function calcAll() { let t=0; document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(tr=>{ const a = parseFloat((tr.querySelector('.col-amount')?.textContent||'$0').replace(/[$,]/g,''))||0; t+=a; }); document.getElementById('grandTotal').textContent = '$'+t.toLocaleString('en-US'); }
-function esc(s) { if(!s)return''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function addEmptyItem(){addRow({is_additional:false,category:'雜項',description:'',quantity:1,unit:'項',unit_price:0,remark:''});updateSeq();document.getElementById('parseCount').textContent=''}
+function delItem(btn){var tr=btn.closest('tr');tr.remove();updateSeq();calcAll();var tb=document.getElementById('itemsBody');if(tb.children.length===0){tb.innerHTML='<tr class="empty-hint"><td colspan="10">請喺上方文字框貼入項目，然後點擊「解析項目」</td></tr>';document.getElementById('parseCount').textContent=''}}
+function updateSeq(){document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(function(tr,i){var s=tr.querySelector('.seq-num');if(s)s.textContent=i+1})}
+function calcRow(inp){var tr=inp.closest('tr');var q=parseFloat(tr.querySelector('.qty-input')?.value)||0;var p=parseFloat(tr.querySelector('.price-input')?.value)||0;var ac=tr.querySelector('.col-amount');if(ac)ac.textContent='$'+(q*p).toLocaleString('en-US');calcAll()}
+function calcAll(){var t=0;document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(function(tr){var a=parseFloat((tr.querySelector('.col-amount')?.textContent||'$0').replace(/[$,]/g,''))||0;t+=a});document.getElementById('grandTotal').textContent='$'+t.toLocaleString('en-US')}
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
 // ── Payments ──
-function addPayment(data={label:'', pct:25, label_pct:'', desc:''}) {
-    const div = document.getElementById('paymentList'); const row = document.createElement('div'); row.className = 'pay-row';
-    row.innerHTML = `<input value="${esc(data.label)}" placeholder="期數名"><input class="pct" type="number" value="${data.pct}" placeholder="%" min="0" max="100">%<input value="${esc(data.label_pct)}" placeholder="比例說明"><input value="${esc(data.desc)}" placeholder="付款條件說明"><button class="btn btn-danger btn-sm btn-del" onclick="this.parentElement.remove()">✕</button>`;
-    div.appendChild(row);
-}
-function addTerm(text='') { const div = document.getElementById('termList'); const row = document.createElement('div'); row.className = 'term-row'; row.innerHTML = `<span style="font-weight:bold;min-width:24px">.</span><input value="${esc(text)}" placeholder="條款內容"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateTermNums()">✕</button>`; div.appendChild(row); updateTermNums(); }
-function updateTermNums() { document.querySelectorAll('#termList .term-row').forEach((r,i)=>{ r.querySelector('span').textContent=(i+1)+'.'; }); }
+function addPayment(data){var div=document.getElementById('paymentList');if(!div)return;data=data||{label:'',pct:25,label_pct:'',desc:''};var row=document.createElement('div');row.className='pay-row';row.innerHTML='<input value="'+esc(data.label)+'" placeholder="期數名"><input class="pct" type="number" value="'+data.pct+'" placeholder="%" min="0" max="100">%<input value="'+esc(data.label_pct)+'" placeholder="比例說明"><input value="'+esc(data.desc)+'" placeholder="付款條件說明"><button class="btn btn-danger btn-sm btn-del" onclick="this.parentElement.remove()">&#x2715;</button>';div.appendChild(row)}
+function addTerm(text){var div=document.getElementById('termList');if(!div)return;text=text||'';var row=document.createElement('div');row.className='term-row';row.innerHTML='<span style="font-weight:bold;min-width:24px">.</span><input value="'+esc(text)+'" placeholder="條款內容"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateTermNums()">&#x2715;</button>';div.appendChild(row);updateTermNums()}
+function updateTermNums(){document.querySelectorAll('#termList .term-row').forEach(function(r,i){r.querySelector('span').textContent=(i+1)+'.'})}
 
 // ── Collect & Generate ──
-function collectData() {
-    const items = [];
-    document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(tr=>{
-        const desc = tr.querySelector('.desc-input')?.value.trim()||''; if (!desc) return;
-        items.push({ is_additional: (tr.querySelector('.stage-select')?.value||'basic')==='additional', category: tr.querySelector('.cat-select')?.value||'雜項', description: desc, quantity: parseFloat(tr.querySelector('.qty-input')?.value)||0, unit: tr.querySelector('.unit-input')?.value.trim()||'項', unit_price: parseFloat(tr.querySelector('.price-input')?.value)||0, remark: tr.querySelector('.remark-input')?.value.trim()||'' });
-    });
-    const readPayments = () => { const rows = document.querySelectorAll('#paymentList .pay-row'); return Array.from(rows).map(r => { const inputs = r.querySelectorAll('input'); const pct = parseFloat(inputs[1]?.value)||0; return {label:inputs[0]?.value||'', pct:pct/100, label_pct:inputs[2]?.value||`總金額之 ${pct}%`, desc:inputs[3]?.value||''}; }).filter(p => p.label); };
-    const readTerms = () => { const inputs = document.querySelectorAll('#termList input'); return Array.from(inputs).map(inp => inp.value).filter(v => v.trim()); };
-    return {
-        project_name: document.getElementById('project_name').value.trim()||'-', owner_name: document.getElementById('owner_name').value.trim()||'',
-        address: document.getElementById('address').value.trim()||'', company_name: document.getElementById('company_name').value.trim()||'',
-        quotation_no: document.getElementById('quotation_no').value.trim()||'', date: document.getElementById('date').value||new Date().toISOString().split('T')[0],
-        validity: document.getElementById('validity').value.trim()||'', version: document.getElementById('version').value.trim()||'',
-        deposit: parseFloat(document.getElementById('deposit').value)||0, items,
-        show_payment: document.getElementById('showPayment').checked, payments: readPayments(),
-        show_terms: document.getElementById('showTerms').checked, terms: readTerms(),
-    };
+function collectData(){
+var items=[];
+document.querySelectorAll('#itemsBody tr:not(.empty-hint)').forEach(function(tr){
+var desc=(tr.querySelector('.desc-input')?.value||'').trim();if(!desc)return;
+items.push({is_additional:(tr.querySelector('.stage-select')?.value||'basic')==='additional',category:tr.querySelector('.cat-select')?.value||'雜項',description:desc,quantity:parseFloat(tr.querySelector('.qty-input')?.value)||0,unit:(tr.querySelector('.unit-input')?.value||'').trim()||'項',unit_price:parseFloat(tr.querySelector('.price-input')?.value)||0,remark:(tr.querySelector('.remark-input')?.value||'').trim()});
+});
+function readPayments(){var rows=document.querySelectorAll('#paymentList .pay-row');return Array.from(rows).map(function(r){var inputs=r.querySelectorAll('input');var pct=parseFloat(inputs[1]?.value)||0;return{label:inputs[0]?.value||'',pct:pct/100,label_pct:inputs[2]?.value||'總金額之 '+pct+'%',desc:inputs[3]?.value||''}}).filter(function(p){return p.label})}
+function readTerms(){var inputs=document.querySelectorAll('#termList input');return Array.from(inputs).map(function(inp){return inp.value}).filter(function(v){return v.trim()})}
+return{
+project_name:document.getElementById('project_name').value.trim()||'-',owner_name:document.getElementById('owner_name').value.trim()||'',
+address:document.getElementById('address').value.trim()||'',company_name:document.getElementById('company_name').value.trim()||'',
+quotation_no:document.getElementById('quotation_no').value.trim()||'',date:document.getElementById('date').value||new Date().toISOString().split('T')[0],
+validity:document.getElementById('validity').value.trim()||'',version:document.getElementById('version').value.trim()||'',
+deposit:parseFloat(document.getElementById('deposit').value)||0,items:items,
+show_payment:document.getElementById('showPayment').checked,payments:readPayments(),
+show_terms:document.getElementById('showTerms').checked,terms:readTerms(),
+};
 }
 
-async function generate(type) {
-    const data = collectData(); if (data.items.length===0) { showMsg('請至少填寫一個工程項目！','error'); return; }
-    const btns = document.querySelectorAll('.btn-primary.btn-lg'); btns.forEach(b=>b.disabled=true);
-    showMsg('正在生成中…','');
-    try {
-        const resp = await fetch('/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({type, data})});
-        if (!resp.ok) { const err=await resp.json(); throw new Error(err.error||'生成失敗'); }
-        const result = await resp.json();
-        if (result.preview_id) {
-            const tname = type==='invoice'?'發票':'報價單'; const parts = [];
-            if (data.quotation_no) parts.push(data.quotation_no); if (data.address) parts.push(data.address); if (data.owner_name) parts.push(data.owner_name);
-            const ds = (data.date||'').replace(/-/g,''); if (ds) parts.push(ds); if (!parts.length) parts.push(ds||'-');
-            document.getElementById('dlgTitle').textContent = tname + '已生成';
-            document.getElementById('dlgFile').textContent = parts.join('_') + '_' + tname + '.xlsx';
-            document.getElementById('dlgLink').href = '/download/' + result.preview_id + '/excel';
-            document.getElementById('dlg').classList.add('show'); showMsg('','');
-        }
-    } catch(err) { showMsg('生成失敗：'+err.message,'error'); }
-    finally { btns.forEach(b=>b.disabled=false); }
+var _lastPid='';
+async function generate(type){
+var data=collectData();if(data.items.length===0){showMsg('請至少填寫一個工程項目！','error');return}
+var btns=document.querySelectorAll('.btn-primary.btn-lg');btns.forEach(function(b){b.disabled=true});
+showMsg('正在生成中…','');
+try{
+var resp=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,data:data})});
+if(!resp.ok){var err=await resp.json();throw new Error(err.error||'生成失敗')}
+var result=await resp.json();
+if(result.preview_id){
+_lastPid=result.preview_id;
+var tname=type==='invoice'?'發票':'報價單';var parts=[];
+if(data.quotation_no)parts.push(data.quotation_no);if(data.address)parts.push(data.address);if(data.owner_name)parts.push(data.owner_name);
+var ds=(data.date||'').replace(/-/g,'');if(ds)parts.push(ds);if(!parts.length)parts.push(ds||'-');
+document.getElementById('dlgTitle').textContent=tname+'已生成';
+document.getElementById('dlgFile').textContent=parts.join('_')+'_'+tname+'.xlsx';
+document.getElementById('dlgLink').href='/download/'+result.preview_id+'/excel';
+document.getElementById('dlg').classList.add('show');showMsg('','');
 }
-function showMsg(t,c) { const m=document.getElementById('msg'); m.textContent=t; m.className='msg '+c; }
-function showMiniPdf() {
-    // Auto-download Excel first
-    const link = document.getElementById('dlgLink');
-    if (link && link.href) {
-        const a = document.createElement('a');
-        a.href = link.href;
-        a.download = '';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-    // Then navigate to MiniPdf
-    setTimeout(function(){ location.href='/minipdf'; }, 500);
+}catch(err){showMsg('生成失敗：'+err.message,'error')}
+finally{btns.forEach(function(b){b.disabled=false})}
+}
+function showMsg(t,c){var m=document.getElementById('msg');m.textContent=t;m.className='msg '+c}
+
+// ── Drive Save ──
+async function saveDriveFromModal(e){
+if(e)e.preventDefault();
+if(!_lastPid){alert('請先生成報價單');return}
+var btn=document.getElementById('dlgDrive');
+btn.textContent='上傳中…';btn.disabled=true;
+try{
+var r=await fetch('/save-drive/'+_lastPid,{method:'POST'});
+if(!r.ok){var j=await r.json();throw new Error(j.error||'failed')}
+var j=await r.json();
+btn.textContent='已存到 Drive';
+btn.style.background='#0F9D58';
+window.open(j.web_link,'_blank');
+}catch(err){btn.textContent='失敗：'+err.message;btn.style.background='#ef4444'}
+finally{setTimeout(function(){btn.textContent='存去 Drive';btn.style.background='#0F9D58';btn.disabled=false},3000)}
+}
+
+// ── WhatsApp Share ──
+async function shareWhatsAppFromModal(){
+if(!_lastPid){alert('請先生成報價單');return}
+try{
+var r=await fetch('/api/whatsapp/'+_lastPid);
+if(!r.ok)return alert('無法獲取分享資料');
+var j=await r.json();
+window.open('https://wa.me/?text='+encodeURIComponent(j.text),'_blank');
+}catch(err){alert('分享失敗：'+err.message)}
+}
+
+// ── MiniPdf ──
+function showMiniPdf(){
+var link=document.getElementById('dlgLink');
+if(link&&link.href){
+var a=document.createElement('a');a.href=link.href;a.download='';document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+setTimeout(function(){location.href='/minipdf'},500);
 }
 
 // ── Upload ──
-async function uploadExcel() {
-    const file = document.getElementById('uploadFile').files[0]; if (!file) return;
-    const um = document.getElementById('uploadMsg'); um.textContent = '解析中…';
-    const fd = new FormData(); fd.append('file', file);
-    try {
-        const resp = await fetch('/upload', {method:'POST', body:fd});
-        if (!resp.ok) { const err=await resp.json(); throw new Error(err.error||'失敗'); }
-        const data = await resp.json();
-        const fields = ['project_name','owner_name','address','company_name','quotation_no','date','validity','version','deposit'];
-        fields.forEach(f => { const el = document.getElementById(f); if (el && data[f] !== undefined) el.value = data[f] || ''; });
-        const basicLines=[], addLines=[];
-        (data.items||[]).forEach(it => { const line=`${it.description} ${it.unit_price}`; if (it.is_additional) addLines.push(line); else basicLines.push(line); });
-        document.getElementById('basicText').value = basicLines.join('\n');
-        document.getElementById('additionalText').value = addLines.join('\n'); parseItems();
-        document.getElementById('paymentList').innerHTML=''; (data.payments||[]).forEach(p=>addPayment(p)); document.getElementById('showPayment').checked=(data.payments||[]).length>0;
-        document.getElementById('termList').innerHTML=''; (data.terms||[]).forEach(t=>addTerm(t)); document.getElementById('showTerms').checked=(data.terms||[]).length>0; updateTermNums();
-        um.textContent = '匯入成功：' + (data._filename||file.name);
-        setTimeout(()=>{um.textContent='';}, 4000);
-    } catch(err) { um.textContent = '匯入失敗：'+err.message; }
+async function uploadExcel(){
+var file=document.getElementById('uploadFile').files[0];if(!file)return;
+var um=document.getElementById('uploadMsg');um.textContent='解析中…';
+var fd=new FormData();fd.append('file',file);
+try{
+var resp=await fetch('/upload',{method:'POST',body:fd});
+if(!resp.ok){var err=await resp.json();throw new Error(err.error||'失敗')}
+var data=await resp.json();
+var fields=['project_name','owner_name','address','company_name','quotation_no','date','validity','version','deposit'];
+fields.forEach(function(f){var el=document.getElementById(f);if(el&&data[f]!==undefined)el.value=data[f]||''});
+var basicLines=[],addLines=[];
+(data.items||[]).forEach(function(it){var line=it.description+' '+it.unit_price;if(it.is_additional)addLines.push(line);else basicLines.push(line)});
+document.getElementById('basicText').value=basicLines.join('\n');
+document.getElementById('additionalText').value=addLines.join('\n');parseItems();
+document.getElementById('paymentList').innerHTML='';(data.payments||[]).forEach(function(p){addPayment(p)});document.getElementById('showPayment').checked=(data.payments||[]).length>0;
+document.getElementById('termList').innerHTML='';(data.terms||[]).forEach(function(t){addTerm(t)});document.getElementById('showTerms').checked=(data.terms||[]).length>0;updateTermNums();
+um.textContent='匯入成功：'+(data._filename||file.name);
+setTimeout(function(){um.textContent=''},4000);
+}catch(err){um.textContent='匯入失敗：'+err.message}
 }
 
-// Default payments/terms
-const DEFAULT_PAYMENTS = [
-    {label:'第一期 (簽約訂金)',pct:20,label_pct:'總金額之 20%',desc:'確認施工圖則、清拆及工程保護進場前付清'},
-    {label:'第二期 (泥水水電)',pct:40,label_pct:'總金額之 40%',desc:'水電管線暗埋及泥水工程完工、驗收後付清'},
-    {label:'第三期 (木工油漆)',pct:30,label_pct:'總金額之 30%',desc:'木工現場結構完成、油漆進場及訂造傢俬進場前付清'},
-    {label:'第四期 (工程尾數)',pct:10,label_pct:'總金額之 10%',desc:'全屋工程完工、清潔交吉及驗收完成後付清'},
+// ── Default payments/terms ──
+var DEFAULT_PAYMENTS=[
+{label:'第一期 (簽約訂金)',pct:20,label_pct:'總金額之 20%',desc:'確認施工圖則、清拆及工程保護進場前付清'},
+{label:'第二期 (泥水水電)',pct:40,label_pct:'總金額之 40%',desc:'水電管線暗埋及泥水工程完工、驗收後付清'},
+{label:'第三期 (木工油漆)',pct:30,label_pct:'總金額之 30%',desc:'木工現場結構完成、油漆進場及訂造傢俬進場前付清'},
+{label:'第四期 (工程尾數)',pct:10,label_pct:'總金額之 10%',desc:'全屋工程完工、清潔交吉及驗收完成後付清'},
 ];
-const DEFAULT_TERMS = [
-    '本報價單所列工程，於完工後均享有 1 年結構及防漏水工程保養期。',
-    '報價已包含工程期間之第三者責任保險及僱員補償保險（勞保）。',
-    '所有加減工程（Variation Order）必須經雙方書面確認金額及工期變更後方可施工，口頭協議一律無效。',
-    '電位計算定義：單位插座計1個位，雙位插座計1.5個位，燈制與燈位分開計算，現場放線時由雙方核對確認。',
-    '預計工期為 90 個工作天（不計星期日及公眾假期），若因公司原因無故延誤，每逾期一日補償業主 HKD $500。',
+var DEFAULT_TERMS=[
+'本報價單所列工程，於完工後均享有 1 年結構及防漏水工程保養期。',
+'報價已包含工程期間之第三者責任保險及僱員補償保險（勞保）。',
+'所有加減工程（Variation Order）必須經雙方書面確認金額及工期變更後方可施工，口頭協議一律無效。',
+'電位計算定義：單位插座計1個位，雙位插座計1.5個位，燈制與燈位分開計算，現場放線時由雙方核對確認。',
+'預計工期為 90 個工作天（不計星期日及公眾假期），若因公司原因無故延誤，每逾期一日補償業主 HKD $500。',
 ];
-DEFAULT_PAYMENTS.forEach(p => addPayment(p));
-DEFAULT_TERMS.forEach(t => addTerm(t));
+DEFAULT_PAYMENTS.forEach(function(p){addPayment(p)});
+DEFAULT_TERMS.forEach(function(t){addTerm(t)});
 </script>
 </body>
 </html>
