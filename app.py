@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, send_file, jsonify, send_from
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
 from drive_sync import list_projects, get_project_data, upload_file
-from projects import register_project, list_projects_local, get_dashboard_stats, update_status, toggle_payment, get_project
+from projects import register_project, list_projects_local, get_dashboard_stats, update_status, toggle_payment, get_project, sync_from_drive
 
 app = Flask(__name__)
 
@@ -419,6 +419,13 @@ def projects_page():
             grouped.append({'type': 'item', 'data': p, 'ym': ym})
     except Exception as e:
         return f'<h1>無法連接 Google Drive</h1><p>{e}</p><a href="/">返回</a> <a href="https://drive.google.com" target="_blank" style="color:#3b82f6">開啟 Google Drive &#x2197;</a>', 500
+    # Sync Drive files into local project tracker
+    try:
+        synced = sync_from_drive(projects)
+        if synced > 0:
+            print(f'Synced {synced} new projects from Drive')
+    except Exception:
+        pass
     return render_template('projects.html', grouped=grouped, version=_VERSION)
 
 

@@ -162,6 +162,60 @@ def delete_project(project_id):
     return None
 
 
+
+
+def sync_from_drive(drive_files):
+    """Sync Google Drive file metadata into projects.json.
+    Only adds new files; does not overwrite existing projects.
+    """
+    db = _load()
+    existing_ids = {p.get('id', '') for p in db['projects']}
+    existing_names = {p.get('project_name', '') for p in db['projects']}
+    added = 0
+    now = _now_iso()
+    for df in drive_files:
+        fid = df.get('id', '')
+        name = df.get('name', '')
+        if fid and fid in existing_ids:
+            continue
+        if name and name in existing_names:
+            continue
+        proj = {
+            'id': fid,
+            'project_name': name,
+            'owner_name': '',
+            'address': '',
+            'company_name': '',
+            'status': 'draft',
+            'created_at': df.get('date', '') + 'T00:00:00Z' if df.get('date') else now,
+            'updated_at': now,
+            'quotation_no': '',
+            'quotation_date': df.get('date', ''),
+            'quotation_total': 0,
+            'invoice_no': '',
+            'invoice_date': '',
+            'invoice_total': 0,
+            'invoice_deposit': 0,
+            'total': 0,
+            'deposit': 0,
+            'items': [],
+            'payments': [],
+            'terms': [],
+            'payments_paid': [],
+            'show_payment': False,
+            'show_terms': False,
+            'drive_name': name,
+            'drive_size_kb': df.get('size_kb', 0),
+            'drive_folder_id': df.get('folder_id', ''),
+        }
+        db['projects'].append(proj)
+        existing_ids.add(fid)
+        existing_names.add(name)
+        added += 1
+    if added > 0:
+        _save(db)
+    return added
+
 def get_dashboard_stats():
     db = _load()
     projects = db['projects']
