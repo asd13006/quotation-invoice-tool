@@ -14,6 +14,8 @@ STATUS_LABELS = {
 
 
 def _load():
+    if _is_vercel():
+        return _load_from_drive()
     if not os.path.exists(_PROJECTS_FILE):
         return {'projects': [], 'counter_quotation': 0, 'counter_invoice': 0}
     with open(_PROJECTS_FILE, 'r', encoding='utf-8') as f:
@@ -23,6 +25,56 @@ def _load():
 def _save(db):
     with open(_PROJECTS_FILE, 'w', encoding='utf-8') as f:
         json.dump(db, f, ensure_ascii=False, indent=2)
+    if _is_vercel():
+        _save_to_drive(db)
+
+def _is_vercel():
+    return bool(os.environ.get('VERCEL'))
+
+_DRIVE_DB_NAME = '_project_tracker.json'
+_drive_db_id = None
+
+def _load_from_drive():
+    """Download projects.json from Google Drive"""
+    global _drive_db_id
+    try:
+        from drive_sync import _get_drive
+        drive = _get_drive()
+        # Search for existing db file
+        results = drive.files().list(
+            q=f"name='{_DRIVE_DB_NAME}' and trashed=false",
+            pageSize=1, fields='files(id)'
+        ).execute()
+        files = results.get('files', [])
+        if files:
+            _drive_db_id = files[0]['id']
+            req = drive.files().get_media(fileId=_drive_db_id)
+            data = json.loads(req.execute().decode('utf-8'))
+            return data
+    except Exception:
+        pass
+    return {'projects': [], 'counter_quotation': 0, 'counter_invoice': 0}
+
+def _save_to_drive(db):
+    """Upload projects.json to Google Drive"""
+    global _drive_db_id
+    try:
+        from drive_sync import _get_drive
+        from googleapiclient.http import MediaIoBaseUpload
+        drive = _get_drive()
+        content = json.dumps(db, ensure_ascii=False, indent=2).encode('utf-8')
+        media = MediaIoBaseUpload(io.BytesIO(content), mimetype='application/json', resumable=True)
+        if _drive_db_id:
+            drive.files().update(fileId=_drive_db_id, media_body=media).execute()
+        else:
+            f = drive.files().create(
+                body={'name': _DRIVE_DB_NAME, 'mimeType': 'application/json'},
+                media_body=media, fields='id'
+            ).execute()
+            _drive_db_id = f.get('id')
+    except Exception as e:
+        print(f'Drive save failed: {e}')
+
 
 
 def _now_iso():
