@@ -1,4 +1,4 @@
-"""裝修報價單/發票助手 — Flask v3.4.0 (+dashboard, +drive save, +whatsapp, +project tracking)"""
+﻿"""裝修報價單/發票助手 — Flask v3.4.0 (+dashboard, +drive save, +whatsapp, +project tracking)"""
 import io, os, re, uuid, random, smtplib, time, json as _json
 from email.mime.text import MIMEText
 from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
