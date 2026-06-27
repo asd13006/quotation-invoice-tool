@@ -405,7 +405,7 @@ def projects_page():
                                 'count': sum(1 for pp in projects if (pp.get('date', '') or '')[:7] == ym)})
             grouped.append({'type': 'item', 'data': p, 'ym': ym})
     except Exception as e:
-        return f'<h1>無法連接 Google Drive</h1><p>{e}</p><a href="/">返回</a>', 500
+        return f'<h1>無法連接 Google Drive</h1><p>{e}</p><a href="/">返回</a> <a href="https://drive.google.com" target="_blank" style="color:#3b82f6">開啟 Google Drive &#x2197;</a>', 500
     return render_template('projects.html', grouped=grouped, version=_VERSION)
 
 
