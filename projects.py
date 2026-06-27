@@ -216,6 +216,48 @@ def sync_from_drive(drive_files):
         _save(db)
     return added
 
+
+
+def parse_drive_files(limit=10):
+    """Download and parse Drive xlsx files that haven't been parsed yet.
+    Returns number of files parsed."""
+    db = _load()
+    parsed = 0
+    for p in db['projects']:
+        if parsed >= limit:
+            break
+        # Skip if already has items (already parsed)
+        if p.get('items') and len(p.get('items', [])) > 0:
+            continue
+        fid = p.get('id', '')
+        if not fid or len(fid) < 10:
+            continue
+        try:
+            from drive_sync import get_project_data
+            data = get_project_data(fid)
+            if data.get('items'):
+                p['items'] = data['items']
+                p['owner_name'] = data.get('owner_name', '') or p.get('owner_name', '')
+                p['address'] = data.get('address', '') or p.get('address', '')
+                p['company_name'] = data.get('company_name', '') or p.get('company_name', '')
+                p['quotation_no'] = data.get('quotation_no', '') or p.get('quotation_no', '')
+                p['quotation_date'] = data.get('date', '') or p.get('quotation_date', '')
+                p['deposit'] = data.get('deposit', 0) or p.get('deposit', 0)
+                # Recalculate total from items
+                sub = sum((it.get('quantity', 1) or 1) * (it.get('unit_price', 0) or 0) for it in data['items'])
+                p['total'] = sub
+                p['quotation_total'] = sub
+                p['updated_at'] = _now_iso()
+                parsed += 1
+        except Exception as e:
+            # Mark as attempted to avoid retrying forever
+            p['items'] = []
+            p['_parse_error'] = str(e)[:200]
+            print(f'Parse failed for {p.get("project_name", fid)}: {e}')
+    if parsed > 0:
+        _save(db)
+    return parsed
+
 def get_dashboard_stats():
     db = _load()
     projects = db['projects']

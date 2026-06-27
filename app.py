@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, send_file, jsonify, send_from
 from openpyxl import Workbook, load_workbook
 from generator import generate_quotation
 from drive_sync import list_projects, get_project_data, upload_file
-from projects import register_project, list_projects_local, get_dashboard_stats, update_status, toggle_payment, get_project, sync_from_drive
+from projects import register_project, list_projects_local, get_dashboard_stats, update_status, toggle_payment, get_project, sync_from_drive, parse_drive_files
 
 app = Flask(__name__)
 
@@ -490,6 +490,18 @@ def api_toggle_payment(project_id, idx):
 
 
 # ═══════════════ DASHBOARD ═══════════════
+
+
+@app.route('/api/sync-drive', methods=['POST'])
+def api_sync_drive():
+    """Parse Drive xlsx files into projects.json for Dashboard/專案管理"""
+    if not _check_auth():
+        return jsonify({'error': 'unauthorized'}), 401
+    try:
+        parsed = parse_drive_files(limit=20)
+        return jsonify({'status': 'ok', 'parsed': parsed})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/dashboard')
 def api_dashboard():

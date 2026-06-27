@@ -63,6 +63,17 @@
 </div>
 
 <script>
+// Auto-sync Drive data for Dashboard
+(async function(){
+    try {
+        const r = await fetch('/api/sync-drive', {method:'POST'});
+        if (r.ok) {
+            const d = await r.json();
+            if (d.parsed > 0) console.log('Synced '+d.parsed+' Drive files');
+        }
+    } catch(e) { /* ignore */ }
+})();
+
 (function() {
     const saved = localStorage.getItem('theme');
     if (saved) { document.documentElement.setAttribute('data-theme', saved); return; }
